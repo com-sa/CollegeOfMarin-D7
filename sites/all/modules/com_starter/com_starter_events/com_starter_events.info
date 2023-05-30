@@ -1,0 +1,7 @@
+name = "COM Events"
+description = Add event listing functionality to site.
+core = 7.x
+package = Content
+version = 7.x-1.0
+dependencies[] = com_starter
+configure = admin/config/content/com_starter

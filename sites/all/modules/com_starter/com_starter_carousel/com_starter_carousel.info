@@ -1,0 +1,9 @@
+name = "COM Carousel"
+description = Add carousel listing functionality to site.
+core = 7.x
+package = Content
+version = 7.x-2.0
+dependencies[] = com_starter
+dependencies[] = image_field_caption
+dependencies[] = weight
+configure = admin/config/administration/com_starter

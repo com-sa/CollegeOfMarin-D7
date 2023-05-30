@@ -1,0 +1,865 @@
+<?php
+
+/*
+ * @file Docusign API integration
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function docusign_menu() {
+  $items = array();
+
+  $items['admin/config/services/docusign'] = array(
+    'title' => 'Docusign Connection Settings',
+    'description' => 'Set Docusign Configuration Settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docusign_admin_settings'),
+    'access arguments' => array('administer docusign'),
+    'file' => 'docusign.admin.inc',
+  );
+  $items['admin/config/services/docusign/folders'] = array(
+    'title' => 'Docusign Folders',
+    'description' => 'See Docusign Folders.',
+    'page callback' => 'docusign_folder_list',
+    'access arguments' => array('administer docusign'),
+    'file' => 'docusign.admin.inc'
+  );
+  $items['admin/config/services/docusign/folders/%docusign_folder'] = array(
+    'title' => 'Docusign Folders',
+    'description' => 'See Docusign Folders.',
+    'page callback' => 'docusign_folder_list_items',
+    'page arguments' => array(5),
+    'access arguments' => array('administer docusign'),
+    'file' => 'docusign.admin.inc'
+  );
+  $items['docusign/event/%/%'] = array(
+    'title' => 'Docusign Event Page',
+    'description' => 'Event Page for Docusign.',
+    'page callback' => 'docusign_event_page',
+    'page arguments' => array(2,3),
+    'access callback' => TRUE,
+    'file' => 'docusign.pages.inc',
+  );
+  $items['user/%user/docusign'] = array(
+    'title' => 'Signed Documents',
+    'description' => 'Viewing Page for Docusign.',
+    'page callback' => 'docusign_view_list',
+    'page arguments' => array(1),
+    'access callback' => 'docusign_access',
+    'access arguments' => array('view own envelopes', NULL),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'docusign.pages.inc',
+  );
+  $items['docusign/%'] = array(
+    'title' => 'Docusign View Page',
+    'description' => 'Viewing Page for Docusign.',
+    'page callback' => 'docusign_view_page',
+    'page arguments' => array(1, 'view'),
+    'access callback' => 'docusign_access',
+    'access arguments' => array('view', 1),
+    'file' => 'docusign.pages.inc',
+  );
+  $items['docusign/%/view'] = array(
+    'title' => 'Docusign Event Page',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['docusign/%/download'] = array(
+    'title' => 'Docusign Download Page',
+    'description' => 'Download Page for Docusign.',
+    'page callback' => 'docusign_pdf_download',
+    'page arguments' => array(1,2),
+    'access callback' => 'docusign_access',
+    'access arguments' => array('view', 1),
+    'file' => 'docusign.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function docusign_permission() {
+  return array(
+    'administer docusign' => array(
+      'title' => t('Administer Docusign'),
+      'description' => t('This permission will allow users to administer docusign'),
+    ),
+    'view own envelopes' => array(
+      'title' => t('View own DocuSign Envelopes'),
+      'description' => t('Allow Users to view their own documents'),
+    ),
+  );
+}
+
+/**
+ * Access callback for docusign envelopes.
+ */
+function docusign_access($op, $envelope, $account = NULL) {
+
+  if (user_access('administer docusign')) {
+    return TRUE;
+  }
+
+  global $user;
+
+  if (is_null($envelope) && $op == 'view own envelopes') {
+    $docs = docusign_envelope_load_by_user($user->uid);
+    if (empty($docs)) {
+      return FALSE;
+    }
+  }
+
+  if (isset($envelope) && $envelope['uid'] == $user->uid) {
+    return user_access('view own envelopes', $user);
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function docusign_libraries_info() {
+
+  $libraries['docusign'] = array(
+    'name' => 'DocuSign Security Libraries',
+    'vendor url' => 'https://code.google.com/p/wse-php/',
+    'download url' => 'https://wse-php.googlecode.com/hg-history/ba4a146e1bbe5bf1ca5e51218938f4aaaf9d0eb3',
+    'version arguments' => array(
+      'file' => 'soap-wsse.php',
+      'pattern' => '@version\s+([0-9a-zA-Z\.-]+)@',
+      'lines' => 40,
+      'cols' => 100,
+    ),
+    'files' => array(
+      'php' => array(
+        'soap-wsse.php',
+        'soap-wsa.php',
+        'xmlseclibs.php',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+
+/**
+ * @param string $envelope_id
+ *   An Envelope ID
+ *
+ * @return
+ *   Return a URL for embedding an iframe or FALSE if it does not exist.
+ */
+function docusign_close_iframe() {
+  drupal_add_js('jQuery(document).ready(function () { parent.Drupal.docusign.frame_dismiss("close"); });', 'inline');
+  return array('#markup' => '<h3>Bye!</h3>');
+}
+
+
+/**
+ * Function to automate the process for creating a docusign envelope and
+ * returning an evelope.
+ *
+ *
+ * @param array $document_ids
+ *   An Array of Document IDs to add to the envelope
+ * @param mixed $roles
+ *   An array of recipients, keyed by role in envelope.  The value is also an
+ *   array with the following keys
+ *   -name, The full Legal Name of the recipient
+ *   -user, either the email address OR a fully formed Drupal User Object
+ *   -identifier, if an email address is used instead of a Drupal User Object,
+ *   you may optionally pass an positive numeric identifier for this role.
+ * @param array $override_files
+ *   An array of files to override the default in the template.  These should
+ *   keyed by document_id.
+ *
+ * @return DocusignEnvelope $envelope
+ *   Returns an instance of a DocusignEnvelope ready to be sent.
+ */
+function docusign_envelope_build($envelope_name, $envelope_blurb, $document_ids, $roles, $override_files = NULL) {
+
+  // Initialize an array to store implementations.
+  $implementations = array();
+
+  foreach(module_implements('docusign_document_info') as $module) {
+    $function = $module . '_docusign_document_info';
+    $implementations += $function();
+  }
+
+  $envelope = new DocuSignEnvelope($envelope_name, $envelope_blurb);
+  $recipients = array();
+
+  foreach($document_ids as $document_id) {
+
+    if (!isset($implementations[$document_id])) {
+      continue;
+    }
+
+    $template = $implementations[$document_id];
+
+    foreach($template['roles'] as $role => $role_description) {
+      // If the role isn't set, don't worry, we just won't add the tabs
+      if (!isset($roles[$role])) {
+        continue;
+      }
+
+      if (!isset($recipients[$role])) {
+        if (is_object($roles[$role]['user'])) {
+          $recipients[$role] = $envelope->addDrupalRecipient($roles[$role]['user'], $roles[$role]['name']);
+        }
+        else {
+          $recipients[$role] = $envelope->addRecipient($roles[$role]['user'], $roles[$role]['name'], $roles[$role]['identifier']);
+        }
+        $recipients[$role]->machine_name = $role;
+      }
+    }
+
+    if (!is_null($override_files) && isset($override_files[$document_id])) {
+      $document = $envelope->addDocument(t("Please Sign The Document: !name", array('!name' => $template['name'])), $override_files[$document_id]);
+    }
+    else {
+      $document = $envelope->addDocument(t("Please Sign The Document: !name", array('!name' => $template['name'])), $template['file']);
+    }
+    $document->machine_name = $document_id;
+
+    foreach($template['tabs'] as $tab) {
+      //Make sure we have the signer as part of the passed recipient parameter
+      if (isset($recipients[$tab['role']])) {
+        $this_tab = $document->addTab($recipients[$tab['role']], $tab['page'], $tab['xpos'], $tab['ypos']);
+        $this_tab->Type = $tab['type'];
+        if (isset($tab['properties'])) {
+          foreach ($tab['properties'] as $prop => $val) {
+            $this_tab->{$prop} = $val;
+          }
+        }
+      }
+    }
+  }
+
+  return $envelope;
+}
+
+
+/**
+ * Get a token for an Evnvelope ID.
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ *
+ * @return
+ *   Return a URL for embedding an iframe or FALSE if it does not exist.
+ */
+function docusign_envelope_get_token($envelope_id) {
+   $envelope = docusign_envelope_load($envelope_id);
+   if ($envelope) {
+     $env = new DocuSignEnvelope();
+     return $env->getTokenURL($envelope);
+   }
+
+   return FALSE;
+}
+
+
+/**
+ * Loads the various Docusign API libraries.
+ * @param string $envelope_id
+ *   An Envelope ID
+ *
+ * @return
+ *   Returns the filename of the included Docusign library when successful, FALSE
+ *   otherwise.
+ */
+function docusign_load_library($file) {
+  static $static_cache = FALSE;
+
+  if (!isset($static_cache[$file])) {
+    $path = libraries_get_path('docusign');
+    $file = $path . '/' . $file;
+    if (file_exists($file)) {
+      if (include_once($file)) {
+        $static_cache[$file] = $file;
+      }
+    }
+  }
+  return $static_cache[$file];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function docusign_theme() {
+  return array(
+    'docusign_iframe_item' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Implements hook_page_alter().
+ *
+ * We are removing all regions except content, header and footer for viewing docusign pages.
+ */
+function docusign_page_alter(&$page) {
+  if (arg(0) == 'docusign') {
+    foreach (element_children($page) as $el) {
+      if (!in_array($el, array('content', 'header', 'footer'))) {
+        $page[$el] = FALSE;
+      }
+    }
+  }
+}
+
+
+/**
+ * Implements hook_element_info().
+ */
+function docusign_element_info() {
+
+  $types['docusign_iframe'] = array(
+    '#input' => FALSE,
+    '#process' => array('docusign_process_iframe', 'ajax_process_form'),
+  );
+
+  return $types;
+}
+
+/**
+ * Process callback for docusign iframe element
+ */
+function docusign_process_iframe($element, &$form_state, $complete_form) {
+
+  return theme('docusign_iframe_item', array('element' => $element));
+}
+
+function theme_docusign_iframe_item($variables) {
+
+ $element = $variables['element'];
+
+ if (!isset($element['#src']) || $element['#src'] === FALSE) {
+  return array(
+    '#markup' => '<p>The iframe did not get a URL. Try again.</p>',
+  );
+ }
+ $attributes = array(
+   'class' => isset($element['#class']) ? $element['#class'] : array('docusign-iframe'),
+   'width' => isset($element['#width']) ? $element['#width'] : '100%',
+   'height' => isset($element['#height']) ? $element['#height'] : '800px',
+   'name' => isset($element['#name']) ? $element['#name'] : 'docusign-iframe',
+   'src' => $element['#src'],
+ );
+
+ $js_settings = array(
+   'elementName' => $attributes['name'],
+   'onSuccess' => isset($element['#success_url']) ? $element['#success_url'] : current_path(),
+   'onFailure' => isset($element['#failure_url']) ? $element['#failure_url'] : current_path(),
+ );
+
+ $element['frame'] = array(
+   '#markup' => '<iframe id="' . drupal_html_id('docusign_iframe') . '"' . drupal_attributes($attributes) . '>',
+   '#attached' => array(
+     'library' => array(array('system', 'drupal.ajax')),
+     'js' => array(
+       drupal_get_path('module', 'docusign') . '/docusign.frame.js',
+       array(
+         'data' => array('docusign' => $js_settings),
+         'type' => 'setting'
+       ),
+     ),
+   ),
+ );
+
+ return $element;
+}
+
+/**
+ * Function to check if a user has a Docusign envelope out for signing.
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ *
+ * @param string $event
+ *   A Docusign Event
+ *
+ * @return bool
+ *   return TRUE if status "OnSigningComplete", FALSE otherwise
+ */
+function docusign_process_event($envelope, $event) {
+  /*
+   * Other events to possibly handle conditionally.
+      'OnSigningComplete',
+      'OnSessionTimeout',
+      'OnTTLExpired',
+      'OnException',
+      'OnAccessCodeFailed',
+      'OnIdCheckFailed',
+      'OnFaxPending',
+   */
+
+  $old_status = $envelope['status'];
+
+  switch($event) {
+    case 'OnSigningComplete':
+      $envelope['status'] = 'Completed';
+      break;
+    case 'OnDecline':
+    case 'OnCancel':
+      $envelope['status'] = 'Decline';
+      break;
+    // The have just viewed a document and not changed it's status.
+    case 'OnViewingComplete':
+      // If the status is Incomplete or Decline, check if status is changed
+      if ($envelope['status'] != 'Completed') {
+        // Check to see if complete from DocuSign or another means
+        $envelope['status'] = docusign_request_status_changes_ex($envelope['envelope_id'], $envelope['uid']);
+      }
+      break;
+    default:
+      $envelope['status'] = 'Incomplete';
+      $envelope['decline_reason'] = $event;
+      break;
+  }
+
+  module_invoke_all('docusign_process_event', $envelope, $event, $old_status);
+
+  // Invoke the Changed rule if Rules enabled.
+  if (module_exists('rules') && ($old_status != $envelope['status'])) {
+    $args = array(
+      'user' => user_load($envelope['uid']),
+      'envelope_id' => $envelope['envelope_id'],
+      'old_status' => $old_status,
+      'new_status' => $envelope['status']
+    );
+    rules_invoke_event_by_args('docusign_rules_envelope_status_changed', $args);
+  }
+
+  docusign_envelope_update($envelope);
+
+  return ($envelope['status'] == 'Completed') ? TRUE : FALSE;
+}
+
+/**
+ * Implements hook_default_wsclient_service().
+ */
+function docusign_default_wsclient_service() {
+
+  $services = array();
+
+  // DocuSign API Service
+  $service = new WSClientServiceDescription();
+  $service->name = 'docusign_credential';
+  $service->label = 'DocuSign Credential Service';
+
+  if (variable_get('docusign_debug', TRUE)) {
+    $service->url = 'https://demo.docusign.net/api/3.0/credential.asmx?WSDL';
+  }
+  else {
+    $service->url = 'https://www.docusign.net/api/3.0/credential.asmx?WSDL';
+  }
+  $service->type = 'docusign_credential_soap';
+
+  try {
+    $service->endpoint()->initializeMetaData();
+    $services[$service->name] = $service;
+  }
+  catch (WSClientException $e) {
+    watchdog('wsclient', $e->__toString());
+  }
+
+  // DocuSign API Service
+  $service = new WSClientServiceDescription();
+  $service->name = 'docusign_api';
+  $service->label = 'DocuSign API Service';
+  if (variable_get('docusign_debug', TRUE)) {
+    $service->url = 'https://demo.docusign.net/api/3.0/api.asmx?WSDL';
+  }
+  else {
+    $service->url = 'https://www.docusign.net/api/3.0/api.asmx?WSDL';
+  }
+
+  $service->type = 'docusign_soap';
+
+  try {
+    $service->endpoint()->initializeMetaData();
+    $services[$service->name] = $service;
+  }
+  catch (WSClientException $e) {
+    watchdog('wsclient', $e->__toString());
+  }
+
+  return $services;
+
+}
+
+/**
+ * Implements hook_wsclient_endpoint_types().
+ */
+function docusign_wsclient_endpoint_types() {
+  return array(
+    'docusign_soap' => array(
+      'label' => t('DocuSign SOAP Endpoint'),
+      'class' => 'DocuSignSOAPEndpoint',
+    ),
+    'docusign_credential_soap' => array(
+      'label' => t('DocuSign Credentials SOAP Endpoint'),
+      'class' => 'DocuSignCredentialSOAPEndpoint',
+    ),
+  );
+}
+
+/**
+ * Login to the Docusign Service.
+ */
+function docusign_service_login() {
+
+  if ($service = wsclient_service_load('docusign_credential')) {
+
+   $options = array(
+     'Email' => "[" . variable_get('docusign_integrator_key', '') . "]" . variable_get('docusign_user_id', ''),
+     'Password' => variable_get('docusign_password', ''),
+   );
+
+   return $service->Login(array('Login' => $options));
+  }
+
+  return FALSE;
+}
+
+/**
+ * Retrieve a list of Folders
+ */
+function docusign_folders_load() {
+  $data = cache_get('docusign:folders');
+
+  if (isset($data->data) && !empty($data->data) && (REQUEST_TIME < $data->expire)) {
+    return $data->data;
+  }
+
+  if ($service = wsclient_service_load('docusign_api')) {
+
+   $options = array(
+     'AccountId' => variable_get('docusign_account_id', ''),
+     'IncludeHierarchy' => TRUE,
+   );
+
+   $result = $service->GetFolderList(array('FoldersFilter' => $options));
+
+   $folders = array();
+   foreach($result->GetFolderListResult->Folders->Folder as $folder) {
+     $folders[$folder->FolderTypeInfo->FolderId] = array(
+       'username' => $folder->FolderOwner->UserName,
+       'email' => $folder->FolderOwner->Email,
+       'folder_type' => $folder->FolderTypeInfo->FolderType,
+       'folder_path' => $folder->FolderTypeInfo->FolderPath,
+       'folder_name' => $folder->FolderTypeInfo->FolderName,
+     );
+   }
+   cache_set('docusign:folders', $folders, 'cache', strtotime("+1 day"));
+   return $folders;
+  }
+
+  return FALSE;
+}
+
+/**
+ *  Load a Folder
+ *
+ * @param string $folder_name
+ *   If the return string should be for "now" or beginning of the day
+ *
+ */
+function docusign_folder_load($folder_name) {
+  $name = explode(':', $folder_name);
+
+  return docusign_folders_items_load(array('folder_type' => $name[0], 'folder_name' => $name[1]));
+}
+
+/**
+ * Retrieve a list of Folder Items
+ *
+ *
+ * -RecycleBin
+ * -Draft
+ * -Inbox
+ * -SentItems
+ * -Normal
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ *
+ * @return
+ *   Return a URL for embedding an iframe or FALSE if it does not exist.
+ */
+function docusign_folders_items_load($folder_type_info, $page_start = 0) {
+
+  if ($service = wsclient_service_load('docusign_api')) {
+
+   $options = array(
+     'AccountId' => variable_get('docusign_account_id', ''),
+     'FolderTypeInfo' => array(
+       'FolderType' => $folder_type_info['folder_type'],
+       'FolderName' => isset($folder_type_info['folder_name']) ? $folder_type_info['folder_name'] : $folder_type_info['folder_type'],
+     ),
+     'StartPosition' => $page_start,
+   );
+
+   $result = $service->GetFolderItems(array('FolderFilter' => $options));
+
+   return $result->GetFolderItemsResult;
+
+  }
+  return FALSE;
+}
+
+/**
+ * Insert a Envelope Item to DB
+ *
+ * @param array $options
+ *
+ *
+ */
+function docusign_envelope_insert($options) {
+  $insert = db_insert('docusign_envelopes')
+    ->fields($options + array(
+      'created' => REQUEST_TIME,
+      'changed' => REQUEST_TIME,
+    ))
+    ->execute();
+}
+
+/**
+ * Update a Envelope Item to DB
+ * @param array $options
+ *
+ *
+ */
+function docusign_envelope_update($options) {
+
+  $docusign_id = $options['docusign_id'];
+  $options['changed'] = REQUEST_TIME;
+
+  $insert = db_merge('docusign_envelopes')
+    ->key(array('docusign_id' => $docusign_id))
+    ->fields($options)
+    ->execute();
+}
+
+/**
+ * Delete a Envelope Item to DB
+ * @param int $docusign_id
+ *
+ *
+ */
+function docusign_envelope_delete($docusign_id) {
+
+  return db_delete('docusign_envelopes')
+    ->condition('docusign_id', $docusign_id)
+    ->execute();
+}
+
+/**
+ * Load an envelope from database
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ */
+function docusign_envelope_load($envelope_id) {
+  $query = db_select('docusign_envelopes', 'de');
+  $result = $query->fields('de')
+    ->condition('de.envelope_id', $envelope_id)
+    ->execute()
+    ->fetchAssoc();
+
+  return $result;
+}
+
+/**
+ * Load an envelope from database
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ */
+function docusign_envelope_load_by_user($uid) {
+  $query = db_select('docusign_envelopes', 'de');
+  $result = $query->fields('de')
+  ->condition('de.uid', $uid)
+  ->execute()
+  ->fetchAllAssoc('envelope_id', PDO::FETCH_ASSOC);
+
+  return $result;
+}
+
+
+
+/**
+ * Request an envelope from DocuSign Service
+ *
+ * @param string $envelope_id
+ *   An Envelope ID
+ * @param bool $include_document
+ *   Include the document in the response.
+ *
+ * @return object
+ *   Returns an Envelope
+ *
+ */
+function docusign_request_envelope($envelope_id, $include_document = FALSE) {
+
+  if ($service = wsclient_service_load('docusign_api')) {
+    $envelope = $service->RequestEnvelope(
+      array(
+        'EnvelopeID' => $envelope_id,
+        'IncludeDocumentBytes' => $include_document,
+      )
+    );
+
+    return $envelope;
+
+  }
+  return FALSE;
+}
+
+
+/**
+ * Return a date in format for xsd
+ *
+ * @param int $envelope_id
+ *   The Envelope ID.
+ *
+ * @result object
+ *   Envelope Status
+ */
+function docusign_request_envelope_status($envelope_id) {
+
+  $data = cache_get('docusign:status:' . $envelope_id);
+
+  if (isset($data->data) && (REQUEST_TIME < $data->expire)) {
+    return $data->data;
+  }
+
+  if ($service = wsclient_service_load('docusign_api')) {
+    $result = $service->RequestStatus(array(
+      'EnvelopeID' => $envelope_id,
+    ));
+
+    cache_set('docusign:status:' . $envelope_id, $result, 'cache', REQUEST_TIME + 1000);
+
+    return $result->RequestStatusResult;
+  }
+  return FALSE;
+}
+
+/**
+ * Return all PDFs for an Envelope into one contiguous PDF Document
+ *
+ * @param int $envelope_id
+ *   The Envelope ID.
+ *
+ * @result bin
+ *   PDFs in binary form
+ */
+function docusign_request_envelope_pdf($envelope_id) {
+
+  $data = cache_get('docusign:pdf:' . $envelope_id);
+
+  if (isset($data->data) && (REQUEST_TIME < $data->expire)) {
+    return $data->data->RequestPDFResult;
+  }
+
+  if ($service = wsclient_service_load('docusign_api')) {
+    $result = $service->RequestPDF(array(
+        'EnvelopeID' => $envelope_id,
+    ));
+
+    cache_set('docusign:pdf:' . $envelope_id, $result, 'cache', REQUEST_TIME + 1000);
+
+    return $result->RequestPDFResult;
+  }
+  return FALSE;
+}
+
+
+/**
+ * Return a date in format for xsd
+ *
+ * @param int $envelope_id
+ *   The Envelope ID.
+ *
+ * @result object
+ *   Envelope Status
+ */
+function docusign_request_status_changes_ex($envelope_id, $uid = NULL) {
+
+  if ($service = wsclient_service_load('docusign_api')) {
+    $result = $service->RequestStatusEx(array(
+        'EnvelopeID' => $envelope_id,
+    ));
+
+    return is_null($uid) ? $result->RequestStatusExResult : docusign_request_status_changes_ex_recipient($result->RequestStatusExResult, $uid);
+  }
+  return FALSE;
+}
+
+/**
+ * Return the Request Status Ex Recipient Envelope Status
+ *
+ * @param StdClass $result_status_ex
+ *   The ResultStatusExResult from Docusign
+ * @param int $uid
+ *   The Recipient's Drupal ID
+ *
+ * @return string
+ *   Return the status String for this recieint
+ */
+function docusign_request_status_changes_ex_recipient($result_status_ex, $uid) {
+
+  if (!is_array($result_status_ex->RecipientStatuses->RecipientStatus)) {
+    $res = array($result_status_ex->RecipientStatuses->RecipientStatus);
+  }
+  else {
+    $res = $result_status_ex->RecipientStatuses->RecipientStatus;
+  }
+
+  foreach ($res as $rs) {
+    if (isset($rs->ClientUserId) && $rs->ClientUserId == $uid) {
+      return $rs->Status;
+    }
+  }
+}
+
+/**
+ * Return a date in format for xsd
+ *
+ * @param bool $now
+ *   If the return string should be for "now" or beginning of the day
+ *
+ * @result string
+ *   XSD formatted Date
+ */
+function _docusign_xsd_date($now = FALSE) {
+  if ($now) {
+    return (date("Y") . "-" . date("m") . "-" . date("d") . "T" . date("H") . ":" . date("i") . ":" . date("s"));
+  } else {
+    return (date("Y") . "-" . date("m") . "-" . date("d") . "T00:00:00.00");
+  }
+}
+
+/**
+ * GUID Generator
+ */
+function _docusign_guid() {
+
+  $string = md5(drupal_get_token(microtime()));
+  $string =
+    chr(123) . substr($string, 0, 8) .
+    '-' . substr($string, 8, 4) .
+    '-' . substr($string,12, 4) .
+    '-' . substr($string,16, 4) .
+    '-' . substr($string,20,12) .
+    chr(125);
+  return drupal_strtoupper($string);
+}

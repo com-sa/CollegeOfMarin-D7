@@ -1,0 +1,389 @@
+<?php
+
+/**
+ * @file
+ * Test Webform scheduled export.
+ */
+
+class WebformScheduleExportTest extends DrupalWebTestCase {
+
+  /**
+   * The profile to install as a basis for testing.
+   *
+   * @var string
+   */
+  protected $profile = 'testing';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp() {
+    parent::setUp(array('webform_scheduled_export'));
+    $account = $this->drupalCreateUser(array(
+      'bypass node access',
+      'edit webform components',
+      'access all webform results',
+    ));
+    $this->drupalLogin($account);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Webform Scheduled Export'),
+      'description' => t('Tests the webform scheduled export functionality'),
+      'group' => t('Webform Scheduled Export'),
+    );
+  }
+
+  /**
+   * Ensure only new submissions are exported.
+   *
+   * @see https://www.drupal.org/node/2752611
+   */
+  public function disable_testNewSubmissions() {
+    // Create a submission and then configure the export to only export new
+    // submissions.
+    $node = $this->createWebformAndSubmission();
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30', array(
+      'range[range_type]' => 'new',
+    ));
+
+    // Run the export, which will export the 1 submission.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+    $file_path = drupal_realpath($sent_emails[0]['params']['attachments'][0]['filepath']);
+    $file_contents = file_get_contents($file_path);
+    $this->assertTrue(strpos($file_contents, 'my custom value'), 'The first submission was exported..');
+
+    // Change the date and run the export again. This time, the file will be
+    // empty.
+    $this->configureExport($node->nid, $mail, 'once', '17/05/2016', '14:30', array(
+      'range[range_type]' => 'new',
+    ));
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+    $file_path = drupal_realpath($sent_emails[0]['params']['attachments'][0]['filepath']);
+    $file_contents = file_get_contents($file_path);
+    $this->assertFalse(strpos($file_contents, 'my custom value'), 'No submissions exported because there were no new submissions.');
+  }
+
+  /**
+   * Ensure only the latest N submissions are exported.
+   *
+   * @see https://www.drupal.org/node/2752611
+   */
+  public function disable_testLatestNOption() {
+    $node = $this->createWebformAndSubmission();
+    $this->drupalPost(sprintf('node/%d', $node->nid), array(
+      'submitted[test_component]' => 'second submission',
+    ), 'Submit');
+
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30', array(
+      'range[range_type]' => 'latest',
+      'range[latest]' => 1,
+    ));
+
+    // Run the export.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+
+    // Ensure the first submission is not included.
+    $file_path = drupal_realpath($sent_emails[0]['params']['attachments'][0]['filepath']);
+    $file_contents = file_get_contents($file_path);
+    $this->assertFalse(strpos($file_contents, 'my custom value'), 'The first submission was not exported..');
+  }
+
+  /**
+   * Test we can get a notification rather than a attachment.
+   */
+  public function testNotificationDelivery() {
+    $node = $this->createWebformAndSubmission();
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30', array(
+      'delivery_method' => 'WseEmailNotification',
+    ));
+
+    // Run cron to send the emails.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail), 'email_notification');
+    $this->assertEqual(sprintf('Exported submissions available for %s', $node->title), $sent_emails[0]['subject']);
+  }
+
+  /**
+   * Ensure excluding components means they don't appear in exports.
+   */
+  public function testPartialExport() {
+    $node = $this->createWebformAndSubmission();
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30', array(
+      'format' => 'delimited',
+      'components[webform_sid]' => 'webform_sid',
+      'components[1]' => FALSE,
+    ));
+
+    // Run cron to send the emails.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+
+    $file_path = drupal_realpath($sent_emails[0]['params']['attachments'][0]['filepath']);
+    $file_contents = file_get_contents($file_path);
+    $this->assertFalse(strpos($file_contents, 'my custom value'), 'The test_component value was excluded from the file contents.');
+  }
+
+  /**
+   * Test all configuration values are saved correctly.
+   */
+  public function testConfigurationForm() {
+    $node = $this->createWebformAndSubmission();
+
+    // Save the form, changing all values from their default.
+    $edit = array(
+      'email' => 'ben@example.com',
+      'format' => 'delimited',
+      'delimiter' => '|',
+      'header_keys' => '1',
+      'select_keys' => '1',
+      'range[range_type]' => 'latest',
+      'range[latest]' => '2',
+      'select_format' => 'compact',
+      'components[webform_sid]' => FALSE,
+      'components[1]' => FALSE,
+      'delivery_method' => 'WseEmailNotification',
+    );
+    $this->drupalPost(sprintf('node/%d/webform-results/scheduled-export/add', $node->nid), $edit, 'Save export configuration');
+    $this->assertText('Webform scheduled export has been created.');
+
+    $this->drupalGet(sprintf('node/%d/webform-results/scheduled-export', $node->nid));
+    $this->clickLink('Edit Schedule');
+
+    // Assert all the select values are still set on the form.
+    foreach ($edit as $field_name => $value) {
+      $this->assertFieldByName($field_name, $value);
+    }
+
+    // Assert the two checkboxes are not checked by Id.
+    $this->assertNoFieldChecked('edit-components-webform-sid');
+    $this->assertNoFieldChecked('edit-components-1');
+  }
+
+  /**
+   * Test the file extensions and mimetypes.
+   */
+  public function testFileExtension() {
+    $node = $this->createWebformAndSubmission();
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30', array(
+      'format' => 'excel',
+    ));
+
+    // Run cron to send the emails.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+
+    // Assert the file attachment.
+    $this->assertEqual('submissions.xlsx', $sent_emails[0]['params']['attachments'][0]['filename']);
+    $this->assertEqual('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $sent_emails[0]['params']['attachments'][0]['filemime']);
+
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '15:30', array(
+      'format' => 'delimited',
+      'delimiter' => '\t',
+    ));
+    // Run cron to send the emails.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+
+    // Assert a tsv attachment.
+    $this->assertEqual('submissions.tsv', $sent_emails[0]['params']['attachments'][0]['filename']);
+    $this->assertEqual('text/tab-separated-values', $sent_emails[0]['params']['attachments'][0]['filemime']);
+
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '16:30', array(
+      'format' => 'delimited',
+      'delimiter' => ',',
+    ));
+    // Run cron to send the emails.
+    $this->cronRun();
+    $sent_emails = $this->assertEmails(array($mail));
+
+    // Assert a tsv attachment.
+    $this->assertEqual('submissions.csv', $sent_emails[0]['params']['attachments'][0]['filename']);
+    $this->assertEqual('text/csv', $sent_emails[0]['params']['attachments'][0]['filemime']);
+  }
+
+  /**
+   * Test a once off export is sent.
+   */
+  public function testSendOnce() {
+    // Create a webform node and a fake submission.
+    $node = $this->createWebformAndSubmission();
+
+    // Configure the scheduled export to a date in the past to send "once".
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30');
+
+    // Run cron to trigger the processing.
+    $this->cronRun();
+
+    // Assert that the email was sent.
+    $this->assertEmails(array($mail));
+
+    // Assert the scheduled export config is now marked as sent.
+    $config = WebformScheduledExportConfig::loadByWebformNid($node->nid);
+    $config = array_shift($config);
+    $this->assertTrue($config->isDelivered(), 'Email submission export was marked as sent');
+
+    // Re-save the configuration and make sure we still don't get emails.
+    $this->configureExport($node->nid, $mail, 'once', '16/05/2016', '14:30');
+    $this->cronRun();
+    $this->assertEmails(array());
+    $entities = entity_load('webform_scheduled_export_config', FALSE, array('webform_nid' => $node->nid), TRUE);
+    $config = reset($entities);
+    $this->assertTrue($config->isDelivered(), 'Config is still marked as sent');
+
+    // Re-save with a new date in the future, ensure the sent flag is reset.
+    $this->configureExport($node->nid, $mail, 'once', date('d/m/Y', REQUEST_TIME), date('H:i', REQUEST_TIME + 3600));
+    $entities = entity_load('webform_scheduled_export_config', FALSE, array('webform_nid' => $node->nid), TRUE);
+    $config = reset($entities);
+    $this->assertFalse($config->isDelivered(), 'Config is no longer marked as sent');
+  }
+
+  /**
+   * Test we can schedule reports for multiple users.
+   */
+  public function testSendToMultiple() {
+    $node = $this->createWebformAndSubmission();
+    $mail1 = $this->randomName() . '@example.com';
+    $mail2 = $this->randomName() . '@example.com';
+    $mail3 = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, array($mail1, $mail2, $mail3), 'once', '16/05/2016', '14:30');
+
+    // Run cron to trigger the report processing.
+    $this->cronRun();
+
+    // Assert that the emails were sent.
+    $this->assertEmails(array($mail1, $mail2, $mail3));
+  }
+
+  /**
+   * Test the different send frequencies.
+   */
+  public function testSendFrequencies() {
+    $node = $this->createWebformAndSubmission();
+
+    // Configure the scheduled export to a date in the past to send "weekly".
+    $mail = $this->randomName() . '@example.com';
+    $this->configureExport($node->nid, $mail, 'weekly', '16/05/2016', '14:30');
+
+    // Query for the exact send_date that was saved.
+    $config = WebformScheduledExportConfig::loadByWebformNid($node->nid);
+    $config = array_shift($config);
+    $send_date = $config->getSendDate();
+
+    // Run cron so that the email is sent.
+    $this->cronRun();
+
+    // Assert that the new send_date is $old_send_date + 7 days.
+    $entities = entity_load('webform_scheduled_export_config', FALSE, array('webform_nid' => $node->nid), TRUE);
+    $config = reset($entities);
+    $this->assertEqual($send_date + (86400 * 7), $config->getSendDate());
+
+    // Assert the scheduled export config is not marked as sent.
+    $this->assertFalse($config->isDelivered(), 'Config is not marked as sent');
+
+    // Assert that the email was sent.
+    $this->assertEmails(array($mail));
+  }
+
+  /**
+   * Test multiple schedules added to a single webform.
+   */
+  public function testMultipleConfigurations() {
+    $node = $node = $this->createWebformAndSubmission();
+    $mail1 = $this->randomName() . '@example.com';
+    $mail2 = $this->randomName() . '@example.com';
+
+    $this->configureExport($node->nid, $mail1, 'weekly', '16/05/2016', '14:30', array());
+    $this->configureExport($node->nid, $mail2, 'daily', '12/05/2016', '14:30', array(), FALSE);
+
+    $this->drupalGet(sprintf('node/%s/webform-results/scheduled-export', $node->nid));
+    $this->assertText($mail1);
+    $this->assertText($mail2);
+    $this->assertLink('Create Schedule');
+    $this->assertLink('Edit Schedule');
+
+    $this->cronRun();
+
+    $this->assertEmails(array($mail1, $mail2));
+  }
+
+  /**
+   * Configure our export.
+   */
+  protected function configureExport($nid, $emails, $frequency, $date, $time, $extra = array(), $edit_existing = TRUE) {
+    if ($edit_existing && $existing_export = WebformScheduledExportConfig::loadByWebformNid($nid)) {
+      $existing_export = array_shift($existing_export);
+      $url = sprintf('node/%s/webform-results/scheduled-export/edit/%s', $nid, $existing_export->id);
+      $message = 'Webform scheduled export has been updated.';
+    }
+    else {
+      $url = sprintf('node/%s/webform-results/scheduled-export/add', $nid);
+      $message = 'Webform scheduled export has been created.';
+    }
+    $emails = (array) $emails;
+    $this->drupalPost($url, array(
+        'email' => implode("\n", $emails),
+        'frequency' => $frequency,
+        'send_date[date]' => $date,
+        'send_date[time]' => $time,
+      ) + $extra, 'Save export configuration');
+    $this->assertText($message);
+  }
+
+  /**
+   * Assert the expected emails received the export.
+   *
+   * @param array $expected_emails
+   *   The emails that we expected.
+   * @param string $key
+   *   The email key to filter on.
+   *
+   * @return array
+   *   The scheduled export emails.
+   */
+  protected function assertEmails(array $expected_emails, $key = 'email_attachment') {
+    $emails = $this->drupalGetMails(array('key' => $key));
+    $this->assertEqual(count($expected_emails), count($emails), t('Expected !expected emails and sent !sent emails', array(
+      '!expected' => count($expected_emails),
+      '!sent' => count($emails),
+    )));
+
+    foreach ($expected_emails as $delta => $mail) {
+      $this->assertEqual($emails[$delta]['to'], $mail);
+    }
+
+    // Reset the email collector.
+    variable_set('drupal_test_email_collector', array());
+
+    return $emails;
+  }
+
+  /**
+   * Helper to create a webform node with a submission.
+   */
+  protected function createWebformAndSubmission() {
+    $node = $this->drupalCreateNode(array('type' => 'webform'));
+    $this->drupalPost(sprintf('node/%d/webform', $node->nid), array(
+      'add[name]' => 'test_component',
+    ), 'Add');
+    $this->drupalPost(NULL, array(), 'Save component');
+    $this->drupalPost(sprintf('node/%d', $node->nid), array(
+      'submitted[test_component]' => 'my custom value',
+    ), 'Submit');
+    return $node;
+  }
+
+}

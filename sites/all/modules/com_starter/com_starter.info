@@ -1,0 +1,9 @@
+name = "COM Starter"
+description = "Starter/container module for COM"
+core = 7.x
+package = Content
+version = 7.x-1.0
+dependencies[] = image
+dependencies[] = pathauto
+dependencies[] = weight
+configure = admin/config/administration/com_starter

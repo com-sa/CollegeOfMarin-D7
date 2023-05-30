@@ -1,0 +1,363 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function com_starter_staff_install() {
+
+	$type_name = com_starter_staff_get_content_type();
+
+	// Create content type
+	$content_type = node_type_set_defaults(
+		array(
+			'type' => $type_name,
+			'name' => st( ucwords($type_name) ),
+			'base' => 'node_content',
+			'description' => st("Add staff members to be listed on your site."),
+			'custom' => 1,
+			'modified' => 1,
+			'locked' => 0,
+			'title_label' => 'Name',
+		)
+	);
+
+	node_type_save( $content_type );
+
+	//*** set per content type options ***//
+	// lets not hae this node published by dfault
+	//variable_set('node_options_' . $type_name, array('status', 'revision') );
+	variable_set('node_options_' . $type_name, array() );
+	variable_set('node_preview_' . $type_name, 1);
+	variable_set('node_submitted_' . $type_name, 0);
+
+	variable_set('weight_enabled_' . $type_name, 1);
+	variable_set('weight_menu_' . $type_name, 0);
+	variable_set('weight_range_' . $type_name, 10);
+
+	/* path alias */
+	variable_set('pathauto_node_' . $type_name . '_pattern', $type_name . '/[node:title]');
+
+	/* add body field */
+	node_add_body_field( $content_type );
+
+	/* create field instances */
+	$fields = com_starter_staff_get_fields();
+
+	foreach ($fields as $field) { field_create_field($field); }
+
+	$instances = com_starter_staff_field_instances();
+	foreach ($instances as $instance) { field_create_instance($instance); }
+
+	$role_permissions_admin = array(
+		'edit any staff content',
+		'delete any staff content',
+	);
+
+	/* add some permissions */
+	$role_permissions = array(
+		// articles
+		'create staff content',
+		'edit own staff content',
+		'delete own staff content',
+	);
+
+	user_role_grant_permissions( 3, $role_permissions );
+	user_role_grant_permissions( 4, $role_permissions );
+	user_role_grant_permissions( 5, $role_permissions );
+	user_role_grant_permissions( 3, $role_permissions_admin );
+	user_role_grant_permissions( 4, $role_permissions_admin );
+
+
+	// create placeholder staff nodes
+	for($i=0;$i<8;$i++) {
+
+		$node = _com_starter_placeholder_create_node(array(
+			'type' => 'staff',
+			'status' => 1,
+		), $i);
+
+		$x = $i+1;
+
+		$node->field_position[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Position ' . ($x));
+		$node->field_office[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Office ' . ($x));
+		$node->field_phone_number[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field($x . $x . $x . "-" . $x . $x . $x . $x);
+
+		$node->field_email[LANGUAGE_NONE][0] = array( "email" => "user" . $x . "@email.com");
+
+		node_save($node);
+	}
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function com_starter_staff_uninstall() {
+
+	$type_name = com_starter_staff_get_content_type();
+
+	/* set per content type options */
+	//variable_del('node_options_' . $type_name);
+	variable_del('node_preview_' . $type_name);
+	variable_del('node_submitted_' . $type_name);
+
+	variable_del('weight_enabled_' . $type_name);
+	variable_del('weight_menu_' . $type_name);
+	variable_del('weight_range_' . $type_name);
+
+	/* path alias */
+	variable_del('pathauto_node_' . $type_name . '_pattern');
+
+	$fields = com_starter_staff_get_fields();
+	foreach ($fields as $field) { field_delete_field( $field['field_name'] ); }
+
+	field_purge_batch(10);
+
+	// Delete  content type
+	node_type_delete( $type_name );
+
+	node_types_rebuild();
+	menu_rebuild();
+
+}
+
+function com_starter_staff_get_content_type() { return 'staff'; }
+
+function com_starter_staff_get_fields() {
+
+	$fields = array(
+		//create Graphic field
+		array(
+			'field_name' => 'field_staff_graphic',
+			'type' => 'image',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'settings' => array(
+				'uri_scheme' => 'public',
+				'default_image' => FALSE,
+			),
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+
+		//create Position field
+		array(
+			'field_name' => 'field_position',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+
+		//create Office field
+		array(
+			'field_name' => 'field_office',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+
+		//create Email field
+		array(
+			'field_name' => 'field_email',
+			'type' => 'email',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+
+		//create Phone Number field
+		array(
+			'field_name' => 'field_phone_number',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+	);
+
+	return $fields;
+}
+
+function com_starter_staff_field_instances() {
+
+	/* add image */
+	/*$imagepath = drupal_get_path('module', 'com_starter_staff') . '/images/teacher_fpo.png';
+	$image = (object) array(
+		'uid' => 1,
+		'uri' => $imagepath,
+		'filemime' => file_get_mimetype($imagepath),
+		'status' => 1,
+	);
+
+	$image = file_copy($image, 'public://', FILE_EXISTS_REPLACE);*/
+
+
+	/* add default staff image */
+	$image_path = _com_starter_placeholder_image_path('com_starter_staff');
+	$image =  _com_starter_placeholder_image_prepare($image_path);
+
+
+	$instances = array(
+		// attach Graphic to Staff
+		array(
+			'field_name' => 'field_staff_graphic',
+			'entity_type' => 'node',
+			'label' => 'Graphic',
+			'bundle' => 'staff',
+			'required' => FALSE,
+			'settings' => array(
+				'default_image' => $image->fid,
+				'file_directory' => 'staff',
+				'file_extensions' => 'png gif jpg jpeg',
+				'max_filesize' => '',
+				'max_resolution' => '1000x1000',
+				'min_resolution' => '50x50',
+				'alt_field' => TRUE,
+				'title_field' => '',
+			),
+			'widget' => array(
+				'type' => 'image_image',
+				'settings' => array(
+					'progress_indicator' => 'throbber',
+					'preview_image_style' => 'medium',
+				),
+				'weight' => 2,
+			),
+			'display' => array(
+				'default' => array(
+					'label' => 'hidden',
+					'type' => 'image',
+					'settings' => array('image_style' => 'medium', 'image_link' => ''),
+					'weight' => -10,
+				),
+				'teaser' => array(
+					'label' => 'hidden',
+					'type' => 'image',
+					'settings' => array('image_style' => 'thumbnail', 'image_link' => 'content'),
+					'weight' => -10,
+				),
+			),
+		),
+
+		// attach Position to Staff
+		array(
+			'field_name' => 'field_position',
+			'entity_type' => 'node',
+			'label' => 'Position',
+			'bundle' => 'staff',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => -1,
+			),
+			'display' => array(
+				'default' => array(
+					'label' => 'hidden',
+					'type' => 'text_default',
+					'weight' => -7,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => -7,
+				),
+			),
+		),
+		// attach Office to Staff
+		array(
+			'field_name' => 'field_office',
+			'entity_type' => 'node',
+			'label' => 'Office',
+			'bundle' => 'staff',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => -1,
+			),
+			'display' => array(
+				'default' => array(
+					'label' => 'inline',
+					'type' => 'text_default',
+					'weight' => -4,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => -4,
+				),
+			),
+		),
+
+		// attach Email to Staff
+		array(
+			'field_name' => 'field_email',
+			'entity_type' => 'node',
+			'label' => 'Email',
+			'bundle' => 'staff',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'email_textfield',
+				'settings' => array(),
+				'weight' => 5,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'email_default',
+					'weight' => -1,
+				),
+				'teaser' => array(
+					'label' => 'hidden',
+					'type' => 'email_default',
+					'weight' => -1,
+				),
+			),
+		),
+
+		// attach Phone Number to Staff
+		array(
+			'field_name' => 'field_phone_number',
+			'entity_type' => 'node',
+			'label' => 'Phone Number',
+			'bundle' => 'staff',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => 8,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'text_default',
+					'weight' => 3,
+				),
+				'teaser' => array(
+					'label' => 'hidden',
+					'type' => 'text_default',
+					'weight' => 3,
+				),
+			),
+		),
+	);
+
+	return $instances;
+}

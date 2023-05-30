@@ -1,0 +1,20 @@
+name = Webform Scheduled Export
+description = Allows you to schedule exports of Webform Submissions.
+core = 7.x
+dependencies[] = webform:webform (>= 4.12)
+dependencies[] = entity:entity
+dependencies[] = date:date
+dependencies[] = date:date_popup
+dependencies[] = mimemail:mimemail
+dependencies[] = drupal:system (>= 7.40)
+
+files[] = includes/WebformScheduledExportConfig.php
+files[] = includes/WebformScheduledExportUIController.php
+files[] = tests/webform_scheduled_export.test
+
+; Information added by Drupal.org packaging script on 2016-08-11
+version = "7.x-1.0"
+core = "7.x"
+project = "webform_scheduled_export"
+datestamp = "1470874440"
+

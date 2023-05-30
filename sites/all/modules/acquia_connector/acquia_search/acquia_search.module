@@ -1,0 +1,266 @@
+<?php
+
+/**
+ * @file
+ * Integration between Acquia Drupal and Acquia's hosted solr search service.
+ */
+
+use Drupal\acquia_search\ApacheSolrEnvironment;
+use Drupal\acquia_search\v3\AcquiaSearchSolrApi as AcquiaSearch3;
+
+define('ACQUIA_SEARCH_OVERRIDE_AUTO_SET', 1);
+define('ACQUIA_SEARCH_AUTO_OVERRIDE_READ_ONLY', 2);
+define('ACQUIA_SEARCH_EXISTING_OVERRIDE', 3);
+
+// Load all our classes because D7 isn't D8.
+require_once __DIR__ . '/src/AcquiaSearchSolrApiInterface.php';
+require_once __DIR__ . '/src/AcquiaSearchConnectionInterface.php';
+require_once __DIR__ . '/src/AcquiaSearchServiceInterface.php';
+require_once __DIR__ . '/src/AcquiaSearchSolrApiBase.php';
+require_once __DIR__ . '/src/AcquiaSearchMessages.php';
+require_once __DIR__ . '/src/AcquiaSearch.php';
+require_once __DIR__ . '/src/AcquiaSearchAuth.php';
+require_once __DIR__ . '/src/AcquiaSearchConnectionTrait.php';
+require_once __DIR__ . '/src/AcquiaSearchServiceTrait.php';
+require_once __DIR__ . '/src/PreferredSearchCoreService.php';
+require_once __DIR__ . '/src/v3/AcquiaSearchSolrApi.php';
+require_once __DIR__ . '/src/Hmac/AuthorizationHeader.php';
+require_once __DIR__ . '/src/Hmac/AuthorizationHeaderBuilder.php';
+
+/**
+ * Implements hook_init().
+ */
+function acquia_search_init() {
+  // Only load on actual drupal paths.
+  if (!menu_get_item(current_path())) {
+    return;
+  }
+  static $acquia_search_set;
+  if (isset($acquia_search_set)) {
+    return;
+  }
+  else {
+    $acquia_search_set = TRUE;
+  }
+  if (!module_exists('apachesolr_search') && !module_exists('search_api_solr')) {
+    return;
+  }
+
+  // During `hook_init` only modules which have defined the hook have their
+  // `.module` files loaded. That means any class loading provided by the
+  // `acquia_agent` module is not provided and classes may have not been loaded.
+  if (!class_exists(AcquiaSubscription::class)) {
+    require_once __DIR__ . '/../acquia_agent/acquia_agent.module';
+  }
+
+  // Load associated files based on search engine.
+  acquia_search_include();
+
+  // Verify Acquia's connector API is working.
+  $subscription = AcquiaSubscription::getInstance();
+  $api = AcquiaSearch::getApi(AcquiaSearch3::ACQUIA_SEARCH_VERSION);
+  if (!$api || !$subscription->isActive()) {
+    return;
+  }
+
+  // Apache Solr
+  if (module_exists('apachesolr_search')) {
+    acquia_search_apachesolr_create_server($api);
+  }
+  // Search API
+  if (module_exists('search_api_solr')) {
+    acquia_search_searchapi_create_server();
+  }
+
+  // On Search Edit pages, don't attempt to change the current configuration.
+  if ($env_id = _acquia_search_on_settings_form()) {
+    // Except we do need to set local overrides for the apachesolr module.
+    // This is because there is no hook_load for environments.
+    // However, on settings forms, we have an env_id.
+    if (is_string($env_id)) {
+      // Ensure the Preferred Core Service is initialized.
+      $environment = new ApacheSolrEnvironment($env_id);
+    }
+    return;
+  }
+
+  // Add apachesolr module connection overrides if applicable.
+  $auto_switch_disabled = variable_get('acquia_search_disable_auto_switch', 0);
+
+  if (!$auto_switch_disabled && $subscription->isActive() && !module_exists('acquia_search_multi_subs')) {
+    // ApacheSolr module specific overrides.
+    if (module_exists('apachesolr_search')) {
+      acquia_search_set_apachesolr_overrides();
+    }
+  }
+}
+
+/**
+ * Matches the current path to search settings forms. See acquia_search_init().
+ */
+function _acquia_search_on_settings_form() {
+  // If current_path isn't a menu item, don't run init.
+  $current_item = menu_get_item(current_path());
+  $prohibited_paths = [
+    'admin/config/search/apachesolr/settings/%/edit',
+    'admin/config/search/apachesolr/settings/%/bias',
+    'admin/config/search/apachesolr/settings/%/index',
+    'admin/config/search/apachesolr/settings/%/clone',
+    'admin/config/search/apachesolr/settings/%/delete',
+    'admin/config/search/search_api/add_server',
+    'admin/config/search/search_api/server/%',
+  ];
+  if (in_array($current_item['path'], $prohibited_paths)) {
+    if (is_array($current_item['page_arguments'][0]) && isset($current_item['page_arguments'][0]['env_id'])) {
+      return $current_item['page_arguments'][0]['env_id'];
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_search_api_service_info().
+ */
+function acquia_search_search_api_service_info() {
+  return [
+    'AcquiaSearchApiService' => [
+      'name' => t('Acquia Search'),
+      'description' => t('<p>Index items using the Acquia Search service.<p>'),
+      'class' => 'AcquiaSearchApiService',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function acquia_search_menu_alter(&$menu) {
+  $delete_page = 'admin/config/search/apachesolr/settings/%apachesolr_environment/delete';
+  if (isset($menu[$delete_page])) {
+    $menu[$delete_page]['access callback'] = 'acquia_search_apachesolr_delete_access';
+    $menu[$delete_page]['access arguments'] = [5];
+  }
+}
+
+/**
+ * Callback wrapper for Apachesolr delete access.
+ */
+function acquia_search_apachesolr_delete_access($this_environment) {
+  acquia_search_include();
+  return acquia_search_environment_delete_access($this_environment);
+}
+
+/**
+ * Implements hook_help().
+ */
+function acquia_search_help($path, $arg) {
+  switch ($path) {
+    case 'admin/config/search/apachesolr':
+      $env_id = $arg[5] ?? apachesolr_default_environment();
+      if (empty($env_id)) {
+        break;
+      }
+      $environment = apachesolr_environment_load($env_id);
+      $subscription = acquia_agent_settings('acquia_subscription_data');
+      $sub_active = !empty($subscription['active']);
+
+      if (ApacheSolrEnvironment::getAcquiaServiceVersion($environment['service_class']) && $sub_active) {
+        $as_link = l(t('Acquia Search'), 'http://www.acquia.com/products-services/acquia-search');
+        return t("Search is being provided by the !as network service.", ['!as' => $as_link]);
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_search_api_server_load().
+ */
+function acquia_search_search_api_server_load(array $servers) {
+  if (module_exists('search_api_solr')) {
+    acquia_search_include();
+    acquia_search_set_searchapi_overrides($servers);
+  }
+}
+
+/**
+ * Function to include the appropriate classes/files based on underlying engine.
+ */
+function acquia_search_include() {
+  static $acquia_search_include;
+  if (isset($acquia_search_include)) {
+    return;
+  }
+  $acquia_search_include = TRUE;
+
+  // ApacheSolr module specific overrides.
+  if (module_exists('apachesolr_search')) {
+    module_load_include('inc', 'acquia_search', 'includes/acquia_search.apachesolr');
+    module_load_include('php', 'acquia_search', 'src/ApacheSolrEnvironment');
+    module_load_include('php', 'acquia_search', 'src/v3/AcquiaSearchV3ApacheSolr');
+    class_alias('AcquiaSearchV3ApacheSolr', 'AcquiaSearchSolrService');
+  }
+  if (module_exists('search_api_solr')) {
+    module_load_include('inc', 'acquia_search', 'includes/acquia_search.searchapi');
+    module_load_include('php', 'acquia_search', 'src/AcquiaSearchApiService');
+    module_load_include('php', 'acquia_search', 'src/v3/AcquiaSearchV3SearchApi');
+  }
+}
+
+/**
+ * Returns the local override based on the search ecosystem and server id.
+ *
+ * Acquia STRONGLY recommends appending the ecosystem (apachesolr/searchapi) to
+ * the server id if you use both ecosystems within your drupal application.
+ *
+ * @param string $server_id
+ *   The server ID.
+ *
+ * @return mixed|null
+ *   The locally overridden core defined in settings.php.
+ */
+function acquia_search_get_local_override($server_id) {
+  global $conf;
+  return $conf['acquia_search'][$server_id]['possible_cores'] ?? NULL;
+}
+
+/**
+ * Helper function to cache the Acquia Search version.
+ */
+function _acquia_search_set_version() {
+  // Cache the version in a variable so we can send it at no extra cost.
+  $version = variable_get('acquia_search_version', '7.x');
+  $info = system_get_info('module', 'acquia_search');
+  // Send the version, or at least the core compatibility as a fallback.
+  $new_version = isset($info['version']) ? (string) $info['version'] : (string) $info['core'];
+  if ($version != $new_version) {
+    variable_set('acquia_search_version', $new_version);
+  }
+}
+
+/**
+ * Implements hook_acquia_subscription_status().
+ *
+ * You can create environments with other IDs if you wish. We track via
+ * the service_class being used. Search can connect to multiple cores as well.
+ */
+function acquia_search_acquia_subscription_status($active, $subscription = FALSE) {
+  if ($active && module_exists('apachesolr_search')) {
+    // Refresh the salt with the subscription data returned by the heartbeat
+    // since it can change periodically.
+    $salt = variable_get('acquia_search_derived_key_salt', '');
+    if (isset($subscription['derived_key_salt']) && $salt != $subscription['derived_key_salt']) {
+      variable_set('acquia_search_derived_key_salt', $subscription['derived_key_salt']);
+    }
+  }
+  else {
+    if (is_int($subscription)) {
+      switch ($subscription) {
+        case ACQUIA_AGENT_SUBSCRIPTION_NOT_FOUND:
+        case ACQUIA_AGENT_SUBSCRIPTION_EXPIRED:
+          acquia_search_disable();
+          break;
+      }
+    }
+  }
+}

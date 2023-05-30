@@ -1,0 +1,255 @@
+<?php 
+
+function com_starter_events_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'com_starter_events') . '/views',
+    'template path' => drupal_get_path('module', 'com_starter_events') . '/views/themes',
+  );
+}
+
+/**
+* Implements hook_date_format_types().
+*/
+function com_starter_events_date_format_types() {
+  return array(
+    'com_starter_day'  => t('Day'),
+    'com_starter_short_month'  => t('Short Month'),
+    'com_starter_time'  => t('Time'),
+    'com_starter_full'  => t('Full'),
+  );
+}
+
+/**
+* Implements hook_date_formats().
+*/
+function com_starter_events_date_formats() {
+	$formats = array(
+		array(
+			'type'    => 'com_starter_day',
+			'format'  => 'j',
+		    'locales' => array(),
+		),
+		array(
+			'type'    => 'com_starter_short_month',
+			'format'  => 'M',
+		    'locales' => array(),
+		),
+		array(
+			'type'    => 'com_starter_time',
+			'format'  => 'g:ia',
+		    'locales' => array(),
+		),				
+		array(
+			'type'    => 'com_starter_full',
+			'format'  => 'F jS, Y - g:ia',
+		    'locales' => array(),
+		),			
+	);
+ 
+	/*foreach ($formats as $format) {
+    	variable_set('date_format_' . $format['type'], $format['format']);
+  	}*/
+  	
+  	return $formats;
+}
+
+
+
+function com_starter_events_block_info() {
+	$blocks['event_info'] = array(
+    	'info' => t('Event Info'),
+		'cache' => DRUPAL_NO_CACHE
+	);
+
+	return $blocks;
+}
+
+function com_starter_events_block_view($delta = '') {
+
+	$block = array();
+
+	switch ($delta) {
+    	case 'event_info':
+    	
+    		$event = menu_get_object();			
+						
+			$date = field_view_field('node', $event, 'field_date', 'full');
+			$location = field_view_field('node', $event, 'field_location', 'full');
+			$presentor = field_view_field('node', $event, 'field_presenter', 'full');
+			$contact = field_view_field('node', $event, 'field_contact', 'full');
+			$fee = field_view_field('node', $event, 'field_fee', 'full');
+			
+				
+			$block['subject'] = NULL;
+			$block['content'] = render($date) . render($location) . render($presentor) . render($contact) . render($fee);
+
+			break;
+	}
+	
+	return $block;
+}
+
+
+
+function com_starter_events_form_com_starter_admin_alter(&$form, &$form_state) {
+
+	$form['com_starter_settings']['com_starter_events'] = array(
+		'#title' => t('Events'), 
+		'#type' => 'fieldset', 
+		'#weight' => count($form['com_starter_settings']) * 3, 
+	);
+	
+	$form['com_starter_settings']['com_starter_events']['com_starter_events_block_header'] = array(
+		'#default_value' => variable_get('com_starter_events_block_header', ''),
+	    '#type' => 'managed_file',
+	    '#title' => t('Events Block Header'),
+	    '#weight' => -10,
+	    '#upload_location' => 'public://com_starter_events_block_header/',
+	);
+	
+	$form['com_starter_settings']['com_starter_events']['com_starter_events_page_header'] = array(
+		'#default_value' => variable_get('com_starter_events_page_header', ''),
+	    '#type' => 'managed_file',
+	    '#title' => t('Events Page Header'),
+	    '#weight' => -10,
+	    '#upload_location' => 'public://com_starter_events_page_header/',
+	);		
+}
+
+
+
+// provide default events importer when feeds is enabled
+function com_starter_events_feeds_importer_default() {
+	$export = array();
+	$feeds_importer = new stdClass();
+	$feeds_importer->disabled = TRUE;
+	$feeds_importer->api_version = 1;
+	$feeds_importer->id = 'default_events_share';
+	$feeds_importer->config = array(
+		'name' => 'Default Events Share',
+		'description' => 'A default implementation of events sharing, to be cloned',
+		'fetcher' => array(
+	    	'plugin_key' => 'FeedsHTTPFetcher',
+			'config' => array(
+				'auto_detect_feeds' => FALSE,
+			    'use_pubsubhubbub' => FALSE,
+			    'designated_hub' => '',
+			    'request_timeout' => NULL,
+			    'auto_scheme' => 'http',
+			    'accept_invalid_cert' => FALSE,
+			),
+		),
+		'parser' => array(
+	    	'plugin_key' => 'FeedsCSVParser',
+			'config' => array(
+				'delimiter' => ',',
+				'no_headers' => 0,
+			),
+		),
+		'processor' => array(
+	    	'plugin_key' => 'FeedsNodeProcessor',
+			'config' => array(
+				'expire' => '-1',
+				'author' => 0,
+				'authorize' => 0,
+				'mappings' => array(
+					0 => array(
+						'source' => 'Path',
+						'target' => 'guid',
+						'unique' => 1,
+					),
+					1 => array(
+						'source' => 'Title',
+						'target' => 'title',
+						'unique' => FALSE,
+					),
+					2 => array(
+						'source' => 'Date',
+						'target' => 'field_date:start',
+						'unique' => FALSE,
+					),
+					3 => array(
+						'source' => 'Presenter',
+						'target' => 'field_presenter',
+						'unique' => FALSE,
+					),
+					4 => array(
+						'source' => 'Contact',
+						'target' => 'field_contact',
+						'unique' => FALSE,
+					),
+					5 => array(
+						'source' => 'Fee',
+						'target' => 'field_fee',
+						'unique' => FALSE,
+					),
+					6 => array(
+						'source' => 'Location',
+						'target' => 'field_location',
+						'unique' => FALSE,
+					),
+					7 => array(
+						'source' => 'Body',
+						'target' => 'body',
+						'unique' => FALSE,
+					),
+				),
+				'update_existing' => '2',
+				'update_non_existent' => 'skip',
+				'input_format' => 'wysiwyg',
+				'skip_hash_check' => 0,
+				'bundle' => 'event',
+			),
+		),
+		'content_type' => '',
+		'update' => 0,
+		'import_period' => '3600',
+		'expire_period' => 3600,
+		'import_on_create' => 1,
+		'process_in_background' => 1,
+	);
+
+	$export['defaultEventsShare'] = $feeds_importer; 
+	return $export;
+}
+function com_starter_events_ctools_plugin_api($module = '', $api = '') {
+	return ($module == "feeds" && $api == "feeds_importer_default") ? array("version" => 1) : NULL;
+}
+
+
+
+
+/***************************
+HIDE EVENTS FEED HEADER: 
+	If there are no 
+	promoted events 
+	to show
+***************************/
+function com_starter_events_views_query_alter(&$view, &$query) {
+	if ($view->name === 'events' && $view->current_display == 'feed' && !com_starter_events_has_featured_events()) {
+		$view->header = array();
+	}
+}
+
+function com_starter_events_views_pre_view(&$view, &$display_id, &$args) {
+	if ( $view->name === 'events' &&  $display_id == 'feed' && !com_starter_events_has_featured_events() ) {
+		$filters = $view->display_handler->get_option('filters');
+		unset($filters['promote']);
+		$view->display_handler->set_option('filters', $filters);
+	}
+}
+/***************************
+END: HIDE EVENTS FEED HEADER
+***************************/
+
+
+
+// Checks is there are 
+// promoted events for 
+// events feed tabs
+function com_starter_events_has_featured_events() {
+	return db_select('node', 'n')
+		->condition('n.type', 'event')->condition('n.promote', 1)->condition('n.status', 1)				
+		->countQuery()->execute()->fetchField() > 0 ? TRUE : FALSE;				
+}

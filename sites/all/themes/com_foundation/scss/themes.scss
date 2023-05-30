@@ -1,0 +1,795 @@
+// Basic styling for COM Drupal themes
+
+/* ---------------------------------------------------------------------------------------------------------------------------------------------
+4/5/16
+--------------------------------------------------------------------------------------------------------------------------------------------- */
+
+/* ELEMENTS: COLOR PALETTE
+----------------------------------------------- */
+/*
+	Deep Blue - $deep-blue: #03305f;
+	COM Blue - $com-blue: #254260;
+	Muted Blue - $muted-blue: #4c5762;
+	Light Blue - $light-blue: #b7c5ca;
+	Gray - $gray: #ccc;
+	Light Gray - $light-gray: #f7f7f7;
+	Bright Gold - $bright-gold: #cc8f34;
+	COM Gold - $com-gold: #ae842c;
+	Muted Gold - $muted-gold: #a47c42;
+	Steel Gray - $steel-gray: #666;
+	Night Gray - $night-gray: #333;
+	COM Black - $com-black: $com-black;
+
+*/
+
+html, body {
+	font-family: $body-font-family;
+	font-size: $base-font-size;
+	font-weight: $base-font-weight;
+	line-height:$base-line-height;
+}
+
+body { color: $body-font-color; }
+
+strong, b { 
+	font-weight: 500;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-family: $body-font-family;
+	font-weight: $header-font-weight;
+	letter-spacing:$base-letter-spacing;
+	text-transform: uppercase;
+}
+
+h1 {
+	border-bottom: 1px solid #e3d8d8;
+	color: $header-font-color;
+	font-size: $h1-font-size;
+	font-weight: 900;
+	letter-spacing: $big-letter-spacing;
+	/*padding-bottom: 0.25em;*/
+    padding-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+h2 {
+	color: $header-font-color;
+	font-size: $h2-font-size;
+	font-weight: 900;
+	letter-spacing: $big-letter-spacing;
+    line-height: 1.3;
+	margin-top: 0;
+	padding-top: 0;
+}
+
+h3 {
+	color: $header-font-color;
+	font-size: $h3-font-size;
+	font-weight: 900;
+	text-transform: none;
+}
+
+h4 {
+	color: $header-font-color;
+	font-size: $h4-font-size;
+	text-transform: none;
+}
+
+h5 {
+	color: $header-font-color;
+	font-size: $h5-font-size;
+	font-weight: 900;
+	text-transform: none;
+}
+
+h6 {
+	color: $header-font-color;
+	font-size: $h6-font-size;
+	text-transform: none;
+}
+
+
+h1, aside h2 { font-weight:900; }
+
+.large-6 h1:not(#page-title) { font-size: $h6-font-size; }
+
+p {
+	letter-spacing: $base-letter-spacing;
+	margin:0 0 10px;
+}
+
+p:empty {
+	display: none;
+}
+
+blockquote, blockquote p {
+	color: #242526;
+	padding: 20px 30px;
+}
+
+blockquote { background: rgba(242, 224, 183,0.79); }
+blockquote cite {
+	color: #808080;
+	font-size:1rem;
+}
+
+img.imgleft {
+	float: left;
+	margin: 1em 1em 1em 0;
+}
+
+img.imgright {
+	float: right;
+	margin: 1em 0 1em 1em;
+}
+
+@media #{$large-up} {
+	.pull-up {
+		position: absolute;
+		right: 0;
+		top: 0;
+	}
+}
+
+.clear-both {
+	clear: both;
+}
+
+.hero {
+	color: $night-gray;
+	//font-size: 2.25rem;	
+    font-size: 2rem;
+	//font-weight: $base-font-weight;    
+    font-weight: 300;
+    line-height: 2rem;	
+}
+
+.call-out {
+	background-color: $light-gray;
+    display: block;
+    margin: 1rem 0;
+    padding: 1rem;
+}
+
+.fixed {
+	left: 0;
+	position: fixed;
+	right: 0;
+}
+
+
+*:first-child > img.imgleft, *:first-child > img.imgleft { margin-top: 0; }
+
+/* STYLE - LINKS */
+a, a:link { color: $anchor-font-color; }
+a:visited { color: $anchor-font-color; }
+a:hover   { color: $anchor-font-color-hover; }
+/*a:active, .active a, a.active  { color: $anchor-font-color-active; }*/
+a:active, .active a, a.active  { color: $anchor-font-color; }
+
+/*.active a { font-style: italic; }*/
+
+a[href^="tel:"] { color:inherit; }
+
+/*--Allowed H1-H6 hyperlinks to default our gold color
+h1 a, h1 a:link, h1 a:visited,
+h2 a, h2 a:link, h2 a:visited,
+h3 a, h3 a:link, h3 a:visited,
+h4 a, h4 a:link, h4 a:visited,
+h5 a, h5 a:link, h5 a:visited,
+h6 a, h6 a:link, h6 a:visited { color: inherit; }
+---*/
+
+/* don't allow jump links to get sucked underneath fixed nav */
+/**:target:before {
+	clear: both;
+	content: "";
+	display: block;
+	height: 10em;
+	width: 100%;
+}*/
+*:target { position: relative; }
+*:target:before {
+	content: "";
+	position: absolute;
+	top: -10rem;
+	visibility: hidden;
+	z-index: -1;
+}
+
+/* ELEMENTS: BUTTONS
+----------------------------------------------- */
+button.tiny, .button.tiny,
+button.small, .button.small,
+button, .button,
+button.expand, .button.expand {
+	background-color: $muted-blue;
+	color: #fff !important;
+	font-weight: 500;
+	letter-spacing: $base-letter-spacing;
+	text-shadow: -0.5px 0.9px 0 #373f47;
+	text-transform: uppercase;
+}
+
+button.tiny a, .button.tiny a,
+button.small a, .button.small a,
+button a, .button a,
+button.expand a, .button.expand a { display: block; padding: .75em 2em;
+	@include transition( );
+}
+
+button.tiny:hover, .button.tiny:hover,
+button.small:hover, .button.small:hover,
+button:hover, .button:hover,
+button.expand:hover, .button.expand:hover,
+button.tiny:focus, .button.tiny:focus,
+button.small:focus, .button.small:focus,
+button:focus, .button:focus,
+button.expand:focus, .button.expand:focus { background-color: $com-black; color: #fff;}
+
+button.expand, 
+.button.expand, 
+button.expanded,
+.button.expanded {
+	width: 100%;
+}
+
+
+
+h1#page-title { margin-bottom: 1em; }
+
+
+/* ELEMENTS: FORM
+----------------------------------------------- */
+
+::-webkit-input-placeholder { text-transform: uppercase; }
+:-moz-placeholder { text-transform: uppercase; }
+::-moz-placeholder { text-transform: uppercase; }
+:-ms-input-placeholder { text-transform: uppercase; }
+
+input[type="file"], input[type="checkbox"], input[type="radio"], select { margin: 0; }
+
+
+/*@media #{$medium-down} {
+	#main,
+	#footer-top > .row,
+	#footer-bottom > .row {
+		padding-left: 0;
+		padding-right: 0;
+	}
+}*/
+
+
+/* RESPONSIVE VIDEO */
+.responsive-video {
+	height: 0;
+	overflow: hidden;
+	padding-bottom: 56.23%;
+	position: relative;
+}
+
+.responsive-video iframe {
+	height: 100%;
+	left: 0;
+	position: absolute;
+	top: 0;
+	width: 100%;
+}
+
+.view .column:only-child {
+	width: 100%;
+}
+
+/* ELEMENTS - GRID */
+@media #{$medium-down} {
+	.view .row { padding-bottom:1em; }
+}
+
+
+
+/* ELEMENTS - BASE FOUNDATION OVERWRITES */
+.row {
+	max-width: $row-width;
+    padding-left: $row-gutter;
+    padding-right: $row-gutter;
+}
+
+.vertical-align {
+	
+	display: -webkit-box;
+	display: -webkit-flex;
+	display: -ms-flexbox;
+	display: flex;
+	
+	-webkit-box-align: center;
+	-webkit-align-items: center;
+	    -ms-flex-align: center;
+	        align-items: center;
+}
+
+/* PAGINATION */
+ul.pagination li a {
+	color: $bright-gold;
+	font-size: 1rem;
+}
+ul.pagination li.current a {
+	background: $bright-gold;
+	color: #fff;
+	cursor: pointer;
+}
+
+.item-list .pager li {
+	display: inline-block;
+	float: none;
+}
+
+ul.pagination li a:hover,
+ul.pagination li a:focus,
+ul.pagination li.current a:hover,
+ul.pagination li.current a:focus {
+	background: $muted-gold;
+	color: #fff;
+}
+
+ul.pagination li a { padding: 0.2625rem 0.725rem 0.2625rem; }
+
+
+
+/* ALERTS & MESSAGING */
+.alert-box {
+	border: 0;
+	font-size: 1rem;
+	font-weight: $base-font-weight;
+	margin: rem-calc(10, 14) 0;
+}
+
+.alert-box.success {
+	background-color: #e2f7bc;
+	color: #719134;
+}
+
+.alert-box.secondary {
+	background: #ffe6ba;
+	color: #997332;
+}
+
+.alert-box.alert {
+	background-color:#ffbaba;
+	color:#993232;
+}
+
+
+
+/* UNPUBLISHED CONTENT */
+.node-unpublished {
+	background-color:#ffecec;
+	border:2px dashed #993232;
+	padding: rem-calc(30,14);
+}
+
+
+
+
+/* -----------------------------------------------
+	REGION: SIDEBAR
+----------------------------------------------- */
+
+@media #{$large-up} {
+	aside.sidebar-first {
+		padding-right: 2.5rem;
+	}
+	
+	aside.sidebar-second {
+		padding-left: 2.5rem;		
+	}
+}
+
+
+/* -----------------------------------------------
+	END REGION: SIDEBAR
+----------------------------------------------- */
+
+
+
+
+/* -----------------------------------------------
+/* VIEW: FEATURED
+----------------------------------------------- */
+
+.view-featured .views-row {
+	margin-bottom: rem-calc(20,14);
+}
+
+.view-featured .views-row > :first-child {
+	margin-bottom: 1rem;
+}
+
+.view-featured .views-row h2 a {
+	color: $com-gold;
+    font-size: rem-calc(16,14);
+    font-weight: 500;
+    text-transform: none;
+}
+
+.view-featured .views-row h2 a:visited, 
+.view-featured .views-row h2 a:hover, 
+.view-featured .views-row h2 a:active { color: $bright-gold; }
+
+.view-featured .view-footer a {
+	width: 100%;
+}
+
+/* -----------------------------------------------
+/* END VIEW: FEATURED
+----------------------------------------------- */
+
+
+
+
+
+/* -----------------------------------------------
+/* REGION: CONTENT ADDITIONAL
+----------------------------------------------- */
+#content-additional {
+	/*padding: 0 $row-gutter;*/
+	position: relative;
+}
+
+/* -----------------------------------------------
+/* END REGION: CONTENT ADDITIONAL
+----------------------------------------------- */
+
+
+
+
+
+
+/* -----------------------------------------------
+/*  ELEMENT: BLOCKS
+----------------------------------------------- */
+
+aside section.block { clear:both; }
+
+
+@media #{$large-up} {
+	aside section.block:first-child:not(.block-block) {
+		padding-top: 7px;
+	}
+
+	aside section.block, main section.block {
+		margin-bottom: rem-calc(30,14);
+	}
+}
+
+section.block:before, section.block:after {
+	clear: both;
+	content: "";
+	display: table;
+}
+
+.block-header-image {
+	margin-bottom: rem-calc(20,14);
+}
+
+.block-title {
+	border-bottom: 1px solid $gray;
+	margin: 0 0 rem-calc(20,14);
+	padding-bottom: 1rem;
+}
+
+.block > img + p {
+	margin-top: 1rem;
+}
+
+/* -----------------------------------------------
+/*  END ELEMENT: BLOCKS
+----------------------------------------------- */
+
+
+
+
+
+/* -----------------------------------------------
+/* PAGES
+----------------------------------------------- */
+
+#main {
+	padding-bottom: 2.5em;
+	padding-top:rem-calc(30,14);
+}
+
+@media #{$large-up} {
+	.fixed + main {
+		padding-top: 80px;
+	}
+}
+
+.node.view-mode-full .date, 
+.node.view-mode-full .location,
+.node.view-mode-full .author {
+	color: $gray;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+@media #{$medium-up} {
+	.node.view-mode-full .date:nth-child(2n) {
+		text-align: right;
+	}
+}
+
+
+.node.view-mode-full .tags {
+    margin-top: .5rem;
+    margin-bottom: 1rem;
+}
+
+
+.node.view-mode-full .tags a {
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+.node.view-mode-full .field-body {
+	margin-top: rem-calc(32,13); 
+}
+
+/* -----------------------------------------------
+/* END PAGES
+----------------------------------------------- */
+
+
+
+
+/* -----------------------------------------------
+/*  ANIMATIONS AND MISC CSS
+----------------------------------------------- */
+
+#messages {
+	bottom: 0;
+	position: fixed;
+    right: 0;
+    z-index: 999;
+}
+
+#messages .alert-box {
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+	padding-right: 2.5rem;
+	animation-duration: 1s;
+	animation-fill-mode: both;
+	animation-name: bounceInUp;
+}
+
+
+
+.loader:before,
+.loader:after,
+.loader {
+	border-radius: 50%;
+    height: .75rem;
+    width: .75rem;
+	-webkit-animation-fill-mode: both;
+	animation-fill-mode: both;
+	-webkit-animation: loader 1.8s infinite ease-in-out;
+	animation: loader 1.8s infinite ease-in-out;
+}
+.loader {
+	margin: .5rem auto;
+	position: relative;
+	font-size: 0;
+	-webkit-transform: translateZ(0);
+	-ms-transform: translateZ(0);
+	transform: translateZ(0);
+	-webkit-animation-delay: -0.16s;
+	animation-delay: -0.16s;
+}
+.loader:before {
+	left: -1.333rem;
+	
+	-webkit-animation-delay: -0.333s;
+	animation-delay: -0.333s;
+}
+.loader:after { left: 1.333rem; }
+.loader:before,
+.loader:after {
+	content: '';
+	position: absolute;
+	top: 0;
+}
+
+
+@-webkit-keyframes bounceInUp {
+  from, 60%, 75%, 90%, to {
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+  }
+
+  from {
+    opacity: 0;
+    -webkit-transform: translate3d(0, 3000px, 0);
+    		transform: translate3d(0, 3000px, 0);
+  }
+
+  60% {
+    opacity: 1;
+    -webkit-transform: translate3d(0, -20px, 0);
+    		transform: translate3d(0, -20px, 0);
+  }
+
+  75% {
+    -webkit-transform: translate3d(0, 10px, 0);
+    		transform: translate3d(0, 10px, 0);
+  }
+
+  90% {
+    -webkit-transform: translate3d(0, -5px, 0);
+    		transform: translate3d(0, -5px, 0);
+  }
+
+  to {
+    -webkit-transform: translate3d(0, 0, 0);
+    		transform: translate3d(0, 0, 0);
+  }
+}
+
+
+@keyframes bounceInUp {
+  from, 60%, 75%, 90%, to {
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+  }
+
+  from {
+    opacity: 0;
+    transform: translate3d(0, 3000px, 0);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate3d(0, -20px, 0);
+  }
+
+  75% {
+    transform: translate3d(0, 10px, 0);
+  }
+
+  90% {
+    transform: translate3d(0, -5px, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+
+
+
+@-webkit-keyframes loader {
+	0%,
+	80%,
+	100% {
+    	box-shadow: 0 1rem 0 -.666rem $bright-gold;
+	}
+	
+	40% {
+    	box-shadow: 0 1rem 0 0 #231f20;
+	}
+}
+
+@keyframes loader {
+	0%,
+	80%,
+	100% {
+    	box-shadow: 0 1rem 0 -.666rem $bright-gold;
+	}
+	40% {
+    	box-shadow: 0 1rem 0 #231f20;
+	}
+}
+
+/* rethingking this with the above */
+/*@media #{$large-up} {
+	*:not(.gridset) {
+		.large-12,
+		.large-6:nth-child(2n + 1),
+		.large-4:nth-child(3n + 1),
+		.large-3:nth-child(4n + 1),
+		.large-2:nth-child(6n + 1),
+		.medium-12:not([class*="large-"]),
+		.medium-6:not([class*="large-"]):nth-child(2n + 1),
+		.medium-4:not([class*="large-"]):nth-child(3n + 1),
+		.medium-3:not([class*="large-"]):nth-child(4n + 1),
+		.medium-2:not([class*="large-"]):nth-child(6n + 1),
+		.small-12:not([class*="large-"]),
+		.small-6:not([class*="large-"]):nth-child(2n + 1),
+		.small-4:not([class*="large-"]):nth-child(3n + 1),
+		.small-3:not([class*="large-"]):nth-child(4n + 1),
+		.small-2:not([class*="large-"]):nth-child(6n + 1) { clear: both; }
+	}
+}
+
+@media #{$medium-only} {
+	*:not(.gridset) > {
+		.medium-12,
+		.medium-6:nth-child(2n + 1),
+		.medium-4:nth-child(3n + 1),
+		.medium-3:nth-child(4n + 1),
+		.medium-2:nth-child(6n + 1),
+		.small-12:not([class*="medium-"]),
+		.small-6:not([class*="medium-"]):nth-child(2n + 1),
+		.small-4:not([class*="medium-"]):nth-child(3n + 1),
+		.small-3:not([class*="medium-"]):nth-child(4n + 1),
+		.small-2:not([class*="medium-"]):nth-child(6n + 1) 	{ clear: both; }
+	}
+}
+
+@media #{$small-only} {
+	*:not(.gridset) > {
+		.small-12,
+		.small-6:nth-child(2n + 1),
+		.small-4:nth-child(3n + 1),
+		.small-3:nth-child(4n + 1),
+		.small-2:nth-child(6n + 1) { clear: both; }
+	}
+}*/
+
+
+.row .row {
+	padding-left: 0;
+    padding-right: 0;
+}
+
+/* for example : floating last child right doesnt */
+/* work for a 3x3 grid when you only have 8 item */
+/* kepp in place when wrapped in .row */
+[class*="column"] + [class*="column"]:last-child { float:left; }
+.row [class*="column"] + [class*="column"]:last-child { float:left; }
+
+
+
+/* -----------------------------------------
+   Admin Styles
+----------------------------------------- */
+
+#main-content + h2.element-invisible + ul.button-group {
+	margin: $row-gutter;
+}
+
+/* recalibrate the font-size of the admin menu after foundaiton */
+#admin-menu ul { font-size: inherit; }
+
+/* position contextual links a little lower on the z axis, 999 is not necessary */
+div.contextual-links-wrapper { z-index: 115; }
+
+
+/* -----------------------------------------
+   Shared Styles
+----------------------------------------- */
+
+table th { font-weight: bold; }
+table td, table th { padding: 9px 10px; text-align: left; }
+
+/* Mobile */
+@media only screen and (max-width: 767px) {
+
+	table.responsive { margin-bottom: 0; }
+
+	.pinned { position: absolute; left: 0; top: 0; background: #fff; width: 35%; overflow: hidden; overflow-x: scroll; border-right: 1px solid $gray; border-left: 1px solid $gray; }
+	.pinned table { border-right: none; border-left: none; width: 100%; }
+	.pinned table th, .pinned table td { white-space: nowrap; }
+	.pinned td:last-child { border-bottom: 0; }
+
+	div.table-wrapper { position: relative; margin-bottom: 20px; overflow: hidden; border-right: 1px solid $gray; }
+	div.table-wrapper div.scrollable { margin-left: 35%; }
+	div.table-wrapper div.scrollable { overflow: scroll; overflow-y: hidden; }
+
+	table.responsive td, table.responsive th { position: relative; white-space: nowrap; overflow: hidden; }
+	table.responsive th:first-child, table.responsive td:first-child, table.responsive td:first-child, table.responsive.pinned td { display: none; }
+
+}
+
+
+/* print styles */
+@media print {
+    header, footer, #navigation /*, .block-meny-1*/ { display: none; }
+}

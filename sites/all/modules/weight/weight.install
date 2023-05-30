@@ -1,0 +1,126 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the Weight module.
+ */
+
+/**
+ * Implements hook_field_schema().
+ */
+function weight_field_schema($field) {
+  return array(
+    'columns' => array(
+      'value' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'value' => array('value'),
+    ),
+  );
+}
+
+/**
+ * Create a Weight field for each enabled content type.
+ * @see _weight_prepare_weight_field()
+ */
+function weight_update_7300() {
+  // No-op because the old hook assumed that 7300 and 7301 would be run in the
+  // same update pass.
+}
+
+/**
+ * Migrate weights to Weight field.
+ */
+function weight_update_7301(&$sandbox) {
+  $batch_size = 1000;
+  if (empty($sandbox['weight_field_name'] ?? '')) {
+    $sandbox['weight_field_name'] = _weight_prepare_weight_field();
+  }
+
+  // Check for weight_weights table.
+  if (db_table_exists('weight_weights')) {
+    if (!isset($sandbox['progress'])) {
+      $sandbox['progress'] = 0;
+      $sandbox['last'] = 0;
+      $sandbox['max'] = ceil(db_query("SELECT COUNT(entity_id) FROM {weight_weights}")->fetchField() / $batch_size);
+    }
+
+    $weights = db_select('weight_weights', 'w')
+      ->fields('w')
+      ->condition('entity_id', $sandbox['last'], '>')
+      ->orderBy('entity_id')
+      ->range(0, $batch_size)
+      ->execute();
+
+    $node_ids = [];
+    foreach($weights as $weight) {
+      $node_ids[$weight->entity_id] = $weight->entity_id;
+    }
+    $nodes = node_load_multiple($node_ids);
+    $last = 0;
+    foreach ($weights as $weight) {
+      if ($node = $nodes[$weight->entity_id]) {
+        $node->{$sandbox['weight_field_name']}[$node->language][0]['value'] = $weight->weight;
+        node_save($node);
+        $last = $weight->entity_id;
+      }
+    }
+    $sandbox['progress']++;
+    $sandbox['last'] = $last;
+    $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+  }
+}
+
+function _weight_prepare_weight_field() {
+  field_cache_clear();
+  $field_name = 'field_weight';
+  $node_types = node_type_get_names();
+
+  // Check for weight_settings table, then create a weight field for each
+  // content type that has weight enabled.
+  if (db_table_exists('weight_settings')) {
+    $types = db_select('weight_settings', 'ws')
+      ->fields('ws')
+      ->execute();
+
+    // Make sure the field name doesn't exist.
+    $field = field_read_field($field_name, array('include_inactive' => TRUE));
+    if (!empty($field)) {
+      $i = 2;
+      while ($field = field_read_field($field_name . $i, array('include_inactive' => TRUE))) {
+        $i++;
+      }
+
+      $field_name = $field_name . $i;
+    }
+
+    $field = array(
+      'field_name' => $field_name,
+      'type' => 'weight',
+    );
+    field_create_field($field);
+
+    foreach ($types as $type) {
+      if ($type->weight_enabled && array_key_exists($type->type, $node_types)) {
+        $instance = array(
+          'field_name' => $field_name,
+          'entity_type' => 'node',
+          'label' => t('Weight'),
+          'bundle' => $type->type,
+          'settings' => array(
+            'range' => $type->weight_range,
+          ),
+          'widget' => array(
+            'type' => 'weight_selector',
+          ),
+        );
+        field_create_instance($instance);
+      }
+    }
+  }
+
+  return $field_name;
+}

@@ -1,0 +1,138 @@
+/* -----------------------------------------------
+/*  PAGES: BLOG 
+----------------------------------------------- */
+
+.view-blog.view-display-id-page .row {
+	margin-bottom: rem-calc(20,14);
+}
+
+.view-blog.view-display-id-page .title {
+	font-size: rem-calc(16,14);
+	font-weight: 900;
+	text-transform: uppercase;
+}
+
+.view-blog.view-display-id-page .title a {
+	color: $muted-gold;
+}
+
+
+
+/* -----------------------------------------------
+/*  BLOG: BLOCK
+----------------------------------------------- */
+#content-additional .block-views-events-feed {
+	margin-top: -2rem;
+}
+
+
+/* -----------------------------------------------
+/*  SIDEBAR: BLOCKS: BLOG
+----------------------------------------------- */
+
+.sidebar {
+	.view-blog-categories, .view-blog {
+		ul {
+			color: $gray;
+		}
+	}
+}
+
+
+
+
+
+/* ELEMENTS: BLOG Carousel
+----------------------------------------------- */
+
+.slick-slide {
+    outline: none;
+}
+
+/*@media #{$large-up} {*/
+	.view-id-blog.carousel {
+		margin-left: -0.5rem;
+		margin-right: -0.5rem;
+	}
+/*}*/
+
+.view-id-blog.carousel .slick-arrow {
+	@include main_sprite(-80px 5px);
+	background-color: #b5c3c9;
+	border-radius: 50%;
+	bottom: calc( 100% + 20px );
+	left: auto;
+	right: .5rem;
+	top: auto;
+	@include transition(none);
+}
+
+.view-id-blog.carousel .slick-arrow:hover {
+	background-color: #224061;
+	background-position: -80px -6px;
+}
+
+.view-id-blog.carousel .slick-arrow:before {
+	content:none;
+}
+
+.view-id-blog.carousel .slick-prev {
+	margin-right: 1rem;
+	right: 20px;
+}
+
+.view-id-blog.carousel .slick-prev {
+	@include transform( rotate(180deg) );
+}
+
+
+.view-id-blog.carousel .slick-slide {
+	padding: 0 .5rem;
+}
+
+.view-id-blog.carousel .views-field-field-thumbnail {
+	margin-bottom: 1rem;
+}
+
+.view-id-blog.carousel h4 {
+	margin-bottom: .5rem;
+}
+
+@media #{$large-up} {
+	.carousel .slick-slide > div > .views-row .body {
+		min-height: 4.7142857143rem;
+	}
+}
+
+
+/* -----------------------------------------------
+/*  END PAGES: BLOG
+----------------------------------------------- */
+
+
+
+
+
+/* ELEMENTS: Blog Carousel
+----------------------------------------------- */
+.view-header a.carousel-all {
+	color: $com-black;
+	font-size: rem-calc(13,14);
+    font-weight: 500;
+	position: absolute;
+    right: 5rem;
+    text-transform: uppercase;
+    top: 0;
+}
+
+.carousel.no-scroll .view-header a.carousel-all {
+	right: .9375rem
+}
+
+.view-header a.carousel-all:hover {
+	color: $light-blue;
+}
+
+.slick-slider {
+	margin-bottom: 0;
+}

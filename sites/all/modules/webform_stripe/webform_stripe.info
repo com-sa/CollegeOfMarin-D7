@@ -1,0 +1,12 @@
+name = Webform Stripe
+description = Adds Stripe integration with Webforms.
+package = Webform
+core = 7.x
+dependencies[] = libraries
+dependencies[] = webform (>= 4.x)
+
+; Information added by Drupal.org packaging script on 2018-07-16
+version = "7.x-1.14"
+core = "7.x"
+project = "webform_stripe"
+datestamp = "1531770524"

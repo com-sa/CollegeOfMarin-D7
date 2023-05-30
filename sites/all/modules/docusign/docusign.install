@@ -1,0 +1,192 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function docusign_schema() {
+  $schema = array();
+
+  $schema['docusign_envelopes'] = array(
+    'description' => 'A Table to track Sent Docusign Envelopes.',
+    'fields' => array(
+      'docusign_id' => array(
+        'description' => 'Primary Key: Identifier for a Docusign Envelope.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'envelope_id' => array(
+        'description' => 'The EnvelopeID of the Envelope.',
+        'type' => 'varchar',
+        'length' => 40,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'default' => NULL,
+        'description' => "The {users}.uid of the associated user.",
+      ),
+      'username' => array(
+        'type' => 'varchar',
+        'length' => 30,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => "The Full Legal Name of the associated user.",
+      ),
+      'email' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => "The email of the associated user.",
+      ),
+      'status' => array(
+        'description' => 'The Current Status of the Envelope. Enumerated Value.',
+        'type' => 'varchar',
+        'length' => 30,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'decline_reason' => array(
+        'description' => 'The Decline Reason of the Envelope, if applicable.',
+        'type' => 'varchar',
+        'length' => 30,
+        'not null' => FALSE,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the Envelope was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the Envelope was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('docusign_id'),
+    'indexes' => array(
+      'uid' => array('uid'),
+    ),
+    'foreign keys' => array(
+      'uid' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implements hook_install().
+ *
+ * We have to alter Web Service Clients schmea so that our service description
+ * can be cached.
+ */
+function docusign_install() {
+
+  $field = array(
+    'type' => 'text',
+    'not null' => FALSE,
+    'serialize' => TRUE,
+    'size' => 'medium',
+    'description' => 'The complex data types used in the operations.',
+  );
+
+  db_change_field('wsclient_service', 'datatypes', 'datatypes', $field);
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function docusign_uninstall() {
+  variable_del('docusign_debug');
+  variable_del('docusign_integrator_key');
+  variable_del('docusign_password');
+  variable_del('docusign_user_id');
+  variable_del('docusign_account_id');
+}
+
+
+
+/**
+ * Implements hook_schema_alter().
+ */
+function docusign_schema_alter(&$schema) {
+  // Change Datatypes for a longer WSDL
+  $schema['wsclient_service']['fields']['datatypes']['size'] = 'medium';
+}
+
+
+/**
+ * Implements hook_requirements().
+ */
+function docusign_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+    $t = get_t();
+
+    $libraries = libraries_get_libraries();
+
+    if (
+      array_key_exists('docusign', $libraries) &&
+      file_exists($libraries['docusign'] . '/soap-wsa.php') &&
+      file_exists($libraries['docusign'] . '/soap-wsse.php') &&
+      file_exists($libraries['docusign'] . '/xmlseclibs.php')
+    ) {
+      $requirements['docusign_libraries'] = array(
+        'title' => $t('DocuSign Security Libraries'),
+        'severity' => REQUIREMENT_OK,
+        'value' => $t('DocuSign SOAP Libraries are Installed.'),
+      );
+    }
+    else {
+      $requirements['docusign_libraries'] = array(
+        'title' => $t('DocuSign Security Libraries'),
+        'value' => $t('DocuSign Security Libraries are not installed'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('DocuSign SOAP API will not work without installing required Security Libraries'),
+      );
+    }
+
+    if (!strlen(variable_get('docusign_user_id', ''))) {
+      $requirements['docusign_credentials'] = array(
+        'title' => $t('DocuSign Credentials'),
+        'severity' => REQUIREMENT_ERROR,
+        'value' => $t('DocuSign Credentials are Not Set. Set them on the !admin_page', array('!admin_page' => l($t('DocuSign Administration Page'), 'admin/config/services/docusign'))),
+      );
+    }
+    else {
+      $requirements['docusign_credentials'] = array(
+        'title' => $t('Docusign Credentials'),
+        'severity' => REQUIREMENT_OK,
+        'value' => $t('DocuSign Credentials are Set.'),
+      );
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Make email field longer
+ */
+function docusign_update_7101() {
+  db_change_field('docusign_envelopes', 'email', 'email', array(
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+    'description' => "The email of the associated user.",
+  ));
+}

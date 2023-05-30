@@ -1,0 +1,177 @@
+/* -----------------------------------------------
+/* REGION: FEATURED
+----------------------------------------------- */
+
+#featured {
+	background-color: #f6f6f6;
+	clear: both;
+	overflow: hidden;
+}
+
+/*.fullbleed > .row {
+	max-width: 100%;
+	padding: 0;
+}
+
+.fullbleed > .row > div {
+	padding: 0;
+}*/
+
+.block-com-starter-carousel > .row {
+	padding: 0;
+}
+
+#featured .carousel {
+	margin-bottom: 0;
+	opacity: 0;
+    
+    @include transition(opacity, .3s);
+}
+
+#featured .carousel.loaded {
+	opacity: 1;
+}
+
+
+#featured .page-banner {
+	background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: cover;
+    position: relative;    
+}
+
+.page-banner > img {
+    opacity: 0;
+    max-width: 100%;
+	position: relative;
+    width: 100%;
+    z-index: -10;
+}
+
+.carousel-layover { 
+	position: absolute;
+}
+
+.carousel.fullbleed .carousel-layover {
+	bottom: 1rem;
+	font-size: rem-calc(20,14);
+	font-weight: 300;
+	left: 0;
+	line-height: rem-calc(23,14);
+    right: 0;
+    text-align: right;
+    
+    //@extend .row;
+}
+
+.carousel:not(.fullbleed) .carousel-layover {
+	background-color: rgba(51, 51, 51, .9);
+	bottom: 0;
+	min-width: 200px;
+	width: 33%;
+	padding: rem-calc(30,14);
+	right: 0;
+	top: 0;	
+}
+
+
+.carousel-layover, .carousel-layover .title {
+	color: #fff;	
+}
+
+
+.carousel:not(.fullbleed) .carousel-layover .title {
+	font-weight: 300;
+	text-align: center;
+}
+
+.carousel.fullbleed .carousel-layover .title {
+	text-shadow: 1px 1px rgba(0,0,0,.5);
+}
+
+
+@media #{$medium-down} {
+	.carousel-layover .body {
+		display: none;		
+	}
+}
+
+
+/*.slick-slider { position: relative; }*/
+
+.slick-prev, .slick-next {
+    font-size: 0;
+    line-height: 0;
+    position: absolute;
+    top: 50%;
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    padding: 0;
+    cursor: pointer;
+    color: transparent;
+    border: none;
+    outline: none;
+    background: transparent;
+}
+
+#featured .slick-arrow {
+	@include main_sprite(-100px -25px);
+	height: 22px;
+    width: 14px;
+	z-index: 1;
+}
+
+.carousel.fullbleed .slick-arrow {
+	opacity: 0;
+	
+	@include transition(opacity, .3s, ease);
+}
+
+.carousel.fullbleed:hover .slick-arrow {
+	opacity: 1;	
+}
+
+.carousel.fullbleed .slick-prev {
+	left: rem-calc(15,14);
+}
+
+.carousel.fullbleed .slick-next {
+	right: rem-calc(15,14);
+}
+
+
+#featured .slick-arrow:before {
+	content: none;
+}
+
+
+#featured .slick-next {
+	transform: rotate(180deg);
+}
+
+.carousel a {
+	outline: none;
+}
+
+#featured .carousel:not(.fullbleed) .slick-prev,
+#featured .carousel:not(.fullbleed) .slick-next {
+	@include transition(all, .3s, ease);
+}
+
+#featured .carousel:not(.fullbleed) .slick-prev {
+	left: -1rem;
+}
+
+#featured .carousel:not(.fullbleed) .slick-next {
+	right: -1rem;	
+}
+
+#featured .carousel:not(.fullbleed):hover .slick-prev {
+	left: 1rem;
+}
+
+#featured .carousel:not(.fullbleed):hover .slick-next {
+	right: 1rem;
+}

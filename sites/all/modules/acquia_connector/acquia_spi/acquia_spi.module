@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * @file
+ * Send site profile information (NSPI) and system data to Acquia Insight.
+ *
+ * This file is here for legacy purposes, to ensure the module can be removed.
+ *
+ * Removing the sub-module could cause Drupal 7 sites to fail.
+ */
+

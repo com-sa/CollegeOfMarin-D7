@@ -1,0 +1,300 @@
+<?php
+/**
+ * Implements hook_views_api.
+*/
+function com_starter_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'com_starter') . '/views',
+    //'template path' => drupal_get_path('module', 'com_starter') . '/views/themes',
+  );
+}
+
+/**
+ * Implements hook_permission.
+*/
+function com_starter_permission() {
+	return array(
+		'administer com_starter' => array(
+			'title' => t('Administer settings for the COM Starter module'),
+		),
+		'manage all menus' => array(
+			'title' => t('Manage all Menus'),
+		)
+	);
+}
+
+
+/**
+ * Implements hook_menu.
+*/
+function com_starter_menu() {
+
+  	$items = array();
+
+  	$items['admin/config/administration/com_starter'] = array(
+		'title' => 'COM Starter',
+		'description' => 'Provide configuration settings for COM Starter',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('com_starter_admin'),
+		'access arguments' => array('administer com starter'),
+	    'file' => 'com_starter.admin.inc',
+	);
+
+  	$items['test'] = array(
+		'title' => 'Test',
+		'page callback' => 'com_starter_test',
+		'access arguments' => array('administer com starter'),
+	);
+
+	return $items;
+}
+
+function com_starter_menu_alter(&$items) {
+	// lets use our own menu admin page to manage permissions
+	$items['admin/structure/menu']['page callback'] = 'com_starter_menu_overview_page';
+}
+
+//function com_starter_test() {}
+
+
+
+function com_starter_preprocess_html($html) {
+	global $theme;
+	
+	if ( $theme == "seven" ) {
+		drupal_add_css(drupal_get_path('module', 'com_starter') . '/css/com.admin.theme.css', array('group' => CSS_THEME,));
+	}
+}
+
+
+// add nav id=department-navigation
+function com_starter_block_view_alter(&$data, $block) {
+	if ( $block->module == "system" && $block->delta == "main-menu" ) {
+		$data["content"] = array(
+			"#markup" => '<nav id="department-navigation">' .
+							render($data["content"]) .
+						 '</nav>',
+		);
+
+		//$data["content"]["#suffix"] = '<span class="hamburger-menu" data-target="#department-navigation"></span>';
+	}
+}
+
+/**
+ * Implements hook_admin_menu_output_alter.
+   hide admin blocks for non super admin user
+**/
+function com_starter_admin_menu_output_alter(&$content) {
+	global $user;
+
+	unset( $content['menu']['admin/index'], $content['menu']['admin/help'] );
+
+	if ( $user->uid != 1 ) {
+		unset( $content['menu']['admin/structure']['admin/structure/block']['admin/structure/block/list/seven'] );
+	}
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter.
+   hide admin blocks for non super admin user
+**/
+function com_starter_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+	global $user;
+
+	if ( !in_array( $user->uid, array(0,1) ) && isset($data['tabs'][0]['output']) ) {
+		$links = $data['tabs'][0]['output'];
+		$i=0;
+		for(;$i < count($links);$i++) {
+			if(isset($links[$i]['#link']['path'])) {
+				if ( $links[$i]['#link']['path'] == 'admin/structure/block/list/seven' ) {
+					unset( $data['tabs'][0]['output'][$i] );
+				}
+			}
+		}
+	}
+}
+
+
+function com_starter_menu_overview_page() {
+	$result = db_query("SELECT * FROM {menu_custom} ORDER BY title", array(), array('fetch' => PDO::FETCH_ASSOC));
+	$header = array(t('Title'), array( 'data' => t('Operations'), 'colspan' => '3', ));
+	$rows = array();
+
+	$admin_menus = array('management', 'navigation', 'user-menu');
+
+	foreach ($result as $menu) {
+		if ( !in_array($menu['menu_name'], $admin_menus) || user_access('manage all menus') ) {
+			$row = array(theme('menu_admin_overview', array('title' => $menu['title'], 'name' => $menu['menu_name'], 'description' => $menu['description'])));
+			$row[] = array('data' => l(t('list links'), 'admin/structure/menu/manage/' . $menu['menu_name']));
+			$row[] = array('data' => l(t('edit menu'), 'admin/structure/menu/manage/' . $menu['menu_name'] . '/edit'));
+			$row[] = array('data' => l(t('add link'), 'admin/structure/menu/manage/' . $menu['menu_name'] . '/add'));
+			$rows[] = $row;
+		}
+		
+	}
+	
+	return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+/* remove some wrappers from media images */
+function com_starter_media_wysiwyg_token_to_markup_alter(&$element, $tag_info, $settings) {
+	$element['content']['#type'] = "image";
+}
+
+function com_starter_form_node_form_alter(&$form, &$form_state, $form_id) {
+	drupal_add_js(drupal_get_path('module', 'com_starter') . '/js/com.admin.node-form.js', array('group' => JS_THEME, "requires_jquery" => TRUE, "defer" => TRUE));
+}
+
+
+/**
+  * HELPER FUNCTIONS
+*/
+
+function com_starter_social_default() {
+	return array(
+		"facebook" => '',
+		"twitter" => '',
+		"linkedin" => '',
+		"youtube" => '',
+		"googleplus" => '',
+	);
+}
+
+function com_starter_get_header_image($type) {
+	$fid = variable_get('com_starter_' . $type . '_header', '');
+	return $fid ? file_create_url(file_load($fid)->uri) : NULL;
+}
+
+/**
+  * PLACEHOLDER
+*/
+
+/*********
+
+$data = array(
+	'type' => 'page',
+	'title' => '',
+	'created' => strtotime("now") - rand(0 , 86400),
+	'status' => 0,
+	'promote' => 0,
+	'sticky' => 0,
+	'body' => '',
+);
+
+*********/
+function _com_starter_placeholder_create_node($data = array(), $i = NULL) {
+
+	$type = isset($data['type']) ? $data['type'] : 'page';
+	$title = isset($data['title']) ? $data['title'] : ( ucwords($type) . ( $i > -1 ? (' ' . ucwords( _com_starter_ordinal($i + 1))) : '' ));
+	$created = isset($data['created']) ? $data['created'] : strtotime("now") - rand(0 , 86400);
+	$status = isset($data['status']) ? $data['status'] : 0;
+	$promote = isset($data['promote']) ? $data['promote'] : 0;
+	$sticky = isset($data['sticky']) ? $data['sticky'] : 0;
+	$body = isset( $data['body'] ) ? $data['body'] : _com_starter_placeholder_text();
+
+	$node = (object) NULL;
+	$node->type = $type;
+	$node->title = $title;
+	$node->uid = 0;
+	$node->created = $created;
+	$node->changed = $created;
+	$node->status = $status;
+	$node->comment = 0;
+	$node->promote = $promote;
+	$node->sticky = $sticky;
+	$node->language = LANGUAGE_NONE;
+
+	/* add body */
+	$node->body = array();
+	$node->body[LANGUAGE_NONE] = array(
+		array(
+			'value' => $body,
+			//'summary' => text_summary($body),
+			'format' => 'wysiwyg',
+		),
+	);
+
+	return $node;
+}
+
+function _com_starter_blog_create_nodes($create_count = 4) {
+
+	for($i=0;$i<$create_count;$i++) {
+
+		$node = _com_starter_placeholder_create_node(
+			array(
+				'promote' => 1,
+				'status' => 1,
+				'type' => 'article'
+			)
+		);
+
+		/* add thubmnail image */
+		$thumb_path = _com_starter_placeholder_image_path('com_starter_blog');
+		$node->field_thumbnail[LANGUAGE_NONE][0] = (array) _com_starter_placeholder_image_prepare($thumb_path);
+
+		/* save node */
+		node_save($node);
+	}
+}
+
+function  _com_starter_placeholder_create_text_field($value) {
+	return array(
+		array(
+			'value' => $value,
+			'safe_value' => text_summary($value),
+			'format' => NULL,
+		),
+	);
+}
+
+function _com_starter_placeholder_text($i=NULL) {
+	$content = array(
+	'<p>Vestibulum ac nunc sit amet mauris auctor ultrices. Duis non nibh turpis. Quisque egestas tincidunt velit, id blandit neque bibendum quis. Suspendisse scelerisque lectus sit amet lacinia fermentum. Cras sodales ultricies elementum.</p>',
+	'<p>Maecenas blandit pharetra lacinia. In molestie, eros vitae gravida tristique, odio ante rutrum lacus, a fermentum odio tortor vitae turpis.</p>',
+	'<p>Ut nec leo mi. Vivamus feugiat tristique nulla, sit amet iaculis nulla volutpat quis. Nunc hendrerit interdum dolor. Etiam faucibus sapien ut justo varius tempus. Sed ac nibh lacus.</p>',
+	'<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque lacinia augue nulla. Duis quis scelerisque urna, scelerisque sollicitudin nulla. Ut ut elit nec lorem pellentesque euismod vitae vitae velit. Mauris vel odio eu odio laoreet vehicula. Pellentesque vitae magna non est vehicula convallis. Sed in vestibulum augue. Sed sed quam augue. Aenean eleifend leo et lorem elementum auctor. Aenean id libero enim.</p>',
+	'<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin in scelerisque nulla. Duis ut nunc facilisis, elementum nulla quis, molestie tortor. Phasellus vehicula nec ipsum in consectetur. Donec volutpat vestibulum lacus, ultricies ullamcorper magna faucibus tempus. Phasellus id purus risus. Cras cursus lacus a ipsum placerat mollis. Sed porttitor, mauris a euismod tincidunt, lacus massa bibendum dolor, non volutpat nisl leo vitae lectus. Vestibulum ornare magna diam, rutrum pretium velit rhoncus eu. Aliquam hendrerit vitae felis quis lobortis. Curabitur tempor, est vitae lacinia ullamcorper, ante dui iaculis tortor, ut egestas sem elit nec dolor. Phasellus euismod orci id sodales ultricies.</p>',
+	'<p>Phasellus vitae rutrum felis. Sed lorem tellus, condimentum quis eros in, feugiat suscipit tortor. Quisque tristique libero elementum felis cursus, eleifend feugiat massa pharetra. Donec ut sapien sit amet dolor sollicitudin placerat. Suspendisse sed metus sapien. Vivamus velit lorem, sollicitudin tincidunt enim in, viverra placerat tellus. Nulla a massa ligula. Nam sollicitudin nunc enim, vitae convallis erat sodales sed. Sed nisl erat, tempor a neque euismod, semper condimentum leo. Cras sollicitudin rutrum ultricies. Cras sed massa purus. Donec lectus dui, gravida vel leo a, ultricies molestie augue. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae</p>',
+	'<p>Donec ac est in arcu laoreet ornare eget quis lectus. Cras sollicitudin tortor lectus, ut lacinia orci facilisis vel. Morbi vel felis augue. Nam tempus pellentesque odio, at interdum turpis sodales nec. Aliquam laoreet libero at quam ornare fermentum. Vestibulum sodales eget velit ac sollicitudin. Phasellus fringilla convallis nibh, eu ullamcorper lectus. Nullam mattis consequat tellus aliquet tempus. Vivamus fringilla libero felis, nec blandit enim consectetur a.</p>',
+'<p>Fusce sed orci nibh. Suspendisse consectetur urna eu dui auctor cursus. In suscipit nibh vel odio vehicula, non pellentesque nulla molestie. Ut pulvinar lorem ut ultricies ultrices. Aenean rutrum cursus consectetur. Quisque placerat bibendum pretium. Donec quis varius dolor, vestibulum tempor lacus. Fusce ut posuere odio.</p>',
+'<p>Donec nibh dui, suscipit et urna et, rutrum faucibus tortor. Aliquam erat volutpat. Nunc sollicitudin neque et mi fermentum gravida nec consequat arcu. In hac habitasse platea dictumst. Pellentesque id sodales ligula, nec congue diam. Vestibulum accumsan rutrum enim. Duis at interdum nibh.</p>',
+);
+
+	$content_length = count($content);
+	if ( $i >= $content_length ) { $i = $i%( $content_length - 1 ); }
+	return $i ? $content[$i] : $content[rand(0, $content_length - 1)];
+}
+
+function _com_starter_ordinal($i) {
+	$numbers  = array(
+		'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+		'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'
+	);
+
+	return $numbers[$i];
+}
+
+function _com_starter_placeholder_image_path($type) {
+	if ( module_exists($type) ) {
+		$placeholders = glob(drupal_get_path('module', $type) . '/placeholder/' . '*.{jpg,jpeg,png,gif}', GLOB_BRACE);
+		$image = $placeholders[array_rand($placeholders)];
+	} else {
+		$image = DRUPAL_ROOT . '/profiles/custom/placeholder/images/' . $type . '.gif';
+	}
+
+	return $image;
+}
+
+function _com_starter_placeholder_image_prepare($path) {
+
+	$image = (object) array(
+		'uid' => 1,
+		'uri' => $path,
+		'filemime' => file_get_mimetype($path),
+		'status' => 1,
+	);
+
+	return file_copy($image, 'public://', FILE_EXISTS_REPLACE);
+}

@@ -1,0 +1,12 @@
+name = DocuSign Example Module
+description = Docusign Example Module demonstrates API integration
+package = Other
+core = 7.x
+
+dependencies[] = docusign
+; Information added by drupal.org packaging script on 2013-07-13
+version = "7.x-1.0-alpha2"
+core = "7.x"
+project = "docusign"
+datestamp = "1373734569"
+

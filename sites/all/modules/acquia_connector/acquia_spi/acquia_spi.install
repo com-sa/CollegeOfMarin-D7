@@ -1,0 +1,45 @@
+<?php
+
+/**
+ * @file
+ * Installer file for Acquia SPI module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function acquia_spi_install() {
+  module_disable(['acquia_spi']);
+  drupal_uninstall_modules(['acquia_spi']);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function acquia_spi_uninstall() {
+  variable_del('acquia_spi_cron_last');
+  variable_del('acquia_spi_cron_interval');
+  variable_del('acquia_spi_cron_interval_override');
+  variable_del('acquia_spi_use_cron');
+  variable_del('acquia_welcome');
+  variable_del('acquia_spi_boot_last');
+  variable_del('acquia_spi_module_diff_data');
+  variable_del('acquia_spi_admin_priv');
+  variable_del('acquia_spi_send_node_user');
+  variable_del('acquia_spi_send_watchdog');
+  variable_del('acquia_spi_server');
+  variable_del('acquia_spi_ssl_override');
+  variable_del('acquia_spi_module_rebuild');
+  variable_del('acquia_spi_set_variables_automatic');
+  variable_del('acquia_spi_ignored_set_variables');
+  variable_del('acquia_spi_saved_variables');
+  variable_del('acquia_spi_set_variables_override');
+  variable_del('acquia_spi_blocked');
+  variable_del('acquia_spi_environment_changed_action');
+  variable_del('acquia_spi_environment_changes');
+  variable_del('acquia_spi_site_environment');
+  variable_del('acquia_spi_env_detection_enabled');
+  variable_del('acquia_spi_site_machine_name');
+  variable_del('acquia_spi_site_name');
+  variable_del('acquia_spi_site_uuid');
+}

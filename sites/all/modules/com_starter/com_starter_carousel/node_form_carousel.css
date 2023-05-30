@@ -1,0 +1,27 @@
+.node-form #edit-field-carousel-image-und {
+	max-height: 0;
+	overflow: hidden;
+
+    transition:max-height 0s linear .2s;    
+}
+
+.node-form #edit-field-carousel-image-und.active {
+    max-height: 999vh;
+    
+    transition:max-height 0s;
+}
+
+.node-form #edit-field-carousel-image-und > .fieldset-wrapper {
+	opacity: 0;
+
+	transition: opacity .3s ease;
+}
+
+.node-form #edit-field-carousel-image-und.active > .fieldset-wrapper {
+	opacity: 1;
+}
+
+.node-form #edit-field-carousel-image-und legend span {
+	color: #0074BD;
+	cursor: pointer;
+}

@@ -1,0 +1,106 @@
+<?php
+
+function docusign_example_menu() {
+  
+  $items = array();
+  $items['docusign_example'] = array(      
+    'title' => 'Docusign Example Page',
+    'description' => 'Demonstrate Docusign Use.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docusign_example_form'),
+    'access callback' => TRUE,
+  );
+  $items['docusign_example/%'] = array(      
+    'title' => 'Docusign Result Page',
+    'description' => 'Demonstrate Docusign Use.',
+    'page callback' => 'docusign_example_result',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+  );
+  return $items;
+  
+}
+
+
+
+function docusign_example_form($form, &$form_state) {
+
+  if (!user_is_logged_in()) {
+    drupal_set_message("Please log in to test docusign", 'warning');
+    return array();
+  }
+
+  $form = array();
+
+  $form['subject'] = array(
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#title' => t('Envelope Subject'),
+    '#required' => TRUE,
+  );
+
+  $form['blurb'] = array(
+    '#type' => 'textarea',
+    '#default_value' => '',
+    '#title' => t('The text of the email message'),
+    '#required' => TRUE,
+  );
+
+  if ($form_state['submitted'] === TRUE) {
+    $form['iframe'] = array(
+      '#type' => 'docusign_iframe',
+      '#src' => $form_state['docusign_token'],
+      '#success_url' => url('docusign_example/success'),
+      '#failure_url' => url('docusign_example/failure'),
+    );
+  }
+
+  $form['actions'] = array(
+    '#type' => 'container',
+    '#attributes' => array('class' => array('form-actions')),
+    '#weight' => 400,
+  );
+
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Sign Envelope'),
+  );
+
+  return $form;
+}
+
+function docusign_example_form_validate($form, &$form_state) {
+  
+    
+}
+
+function docusign_example_form_submit($form, &$form_state) {
+  if (!isset($form_state['docusign_token'])) {
+     $envelope = new DocuSignEnvelope(filter_xss($form_state['values']['subject']), filter_xss($form_state['values']['blurb']));
+
+    // Add a signing recipient
+    $recipient1 = $envelope->addDrupalRecipient($GLOBALS['user'], 'Special Name');
+    // Add the account holder
+    $recipient2 = $envelope->addDocusignAccountHolder();
+    $file = drupal_get_path('module', 'docusign_example') . '/my.pdf';
+
+    $document = $envelope->addDocument("Document X to Sign", $file);
+
+    // First Tab (recipient, page, x, y)
+    $document->addTab($recipient1, 1, 390, 280);
+
+    // Second Tab
+    $document->addTab($recipient2, 1, 30, 400);
+    
+    $form_state['docusign_envelope'] = $envelope;    
+    $form_state['docusign_token'] = $form_state['docusign_envelope']->sendEnvelope();    
+  }
+  
+  $form_state['rebuild'] = TRUE;
+    
+}
+
+
+function docusign_example_result($type) {
+  return array('#markup' => t('<h3>Your Enveloped !status</h3>', array('!status' => ($type == 'success') ? 'Succeeded' : 'Failed')));
+}

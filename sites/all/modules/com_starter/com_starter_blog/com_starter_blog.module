@@ -1,0 +1,96 @@
+<?php 
+
+function com_starter_blog_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'com_starter_blog') . '/views',
+    //'template path' => drupal_get_path('module', 'com_starter_blog') . '/views/themes',
+  );
+}
+
+function com_starter_blog_form_com_starter_admin_alter(&$form, &$form_state) {
+
+	$form['com_starter_settings']['com_starter_blog'] = array(
+		'#title' => t('Blog'), 
+		'#type' => 'fieldset', 
+		'#weight' => count($form['com_starter_settings']) * 3, 
+	);
+		
+	$form['com_starter_settings']['com_starter_blog']['com_starter_blog_page_header'] = array(
+		'#default_value' => variable_get('com_starter_blog_page_header', ''),
+	    '#type' => 'managed_file',
+	    '#title' => t('Blog Page Header'),
+	    '#weight' => -10,
+	    '#upload_location' => 'public://com_starter_blog_page_header/',
+	);
+	
+	
+	$blogview = views_get_view('blog');
+	foreach ($blogview->display as &$display) {
+		if ( $display->display_plugin == "block" ) {
+			$block = block_load('views', 'blog-' . $display->id);
+			if ( strpos( $block->region, 'content') > -1 ) {
+				$form['com_starter_settings']['com_starter_blog']['blog_' . $display->id . '_per_row'] = array(
+					'#default_value' => variable_get('blog_' . $display->id . '_per_row', 4),
+					'#options' => array( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+				    '#type' => 'select',
+				    '#title' => $display->display_title,
+				    '#description' => t('Articles Per Row'),
+				    '#weight' => 0,
+				);
+			}
+		}
+	}
+	
+	
+	
+}
+
+function com_starter_blog_form_block_admin_configure_alter(&$form, &$form_state) {
+	//if ( $form['module']['#value'] == "views" && $form['delta']['#value'] == "blog-top_stories" ) {
+	if ( $form['module']['#value'] == "views" ) {
+		
+		if ( strstr($form['delta']['#value'], "blog-") ) {
+			$delta = str_replace ( "blog-" , "" , $form['delta']['#value'] );
+				
+			$view = views_get_view("blog");
+			$view->set_display($delta);
+			$view_display = $view->display_handler->display;
+			if ( isset($view_display ->display_options['css_class']) && strstr($view_display ->display_options['css_class'], "carousel") )  {
+				$form['settings']['blog_' . $delta . '_per_row'] = array(
+					'#type' => 'select',
+					'#title' => t('Selected'),
+					'#options' => array(1 => 1, 2=> 2,4 => 4,6 => 6, 8 => 8),
+					'#default_value' => variable_get('blog_top_stories_per_row', 4),
+					'#description' => t('Set this to <em>Yes</em> if you would like this category to be selected by default.'),
+				);
+
+				$form['#submit'][] = 'carousel_block_form_submit';
+			}
+		}
+		
+	}
+}
+
+/**
+ * Variable_set form submit action.
+ */
+function carousel_block_form_submit($form, &$form_state) {
+	variable_set('blog_top_stories_per_row', filter_xss($form_state['values']['blog_top_stories_per_row']));
+}
+
+
+function com_starter_blog_views_pre_render(&$view) {
+	if ( $view->name == "blog" ) {
+		if ( com_starter_blog_view_is_carousel($view) ) {
+			$per_row = variable_get('blog_' . $view->current_display . '_per_row', 4);
+			$unique_class = 'view-display-id-' . $view->current_display;
+			drupal_add_js(array('COMCarousel' => array($unique_class => $per_row)), 'setting');
+		}
+	}
+}
+
+function com_starter_blog_view_is_carousel(&$view) {
+	$display_options = $view->display_handler->display->display_options;
+	return isset($display_options['css_class']) && strstr($display_options['css_class'], "carousel");
+}

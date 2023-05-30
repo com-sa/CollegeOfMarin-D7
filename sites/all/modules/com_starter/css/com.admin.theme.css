@@ -1,0 +1,307 @@
+/* DEFAULT */
+
+body, input, button, input[type="submit"] { 
+    font-family: "Helvetica Neue",Helvetica,Arial,Verdana,"Trebuchet MS";
+    font-size: 14px;
+}
+
+body, buttons, html, input, textarea {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-shadow: 1px 1px 1px rgba(0,0,0,.004);
+}
+
+
+
+
+
+/* FORM */
+
+label + input,
+input + .description {
+	margin-top: .25em;
+}
+
+input:not([type]), input[type="text"], input[type="password"], input[type="date"], input[type="datetime"], input[type="datetime-local"], input[type="month"], input[type="week"], input[type="email"], input[type="number"], input[type="search"], input[type="tel"], input[type="time"], input[type="url"], input[type="color"], textarea {
+	background-color: transparent;
+    color: rgba(0,0,0,.87);
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,.26);
+    outline: 0;
+    font-size: 16px;
+    padding: .5rem;
+    box-shadow: none;
+    border-radius: 0;
+    background-image: none;
+}
+
+.form-type-checkbox {
+	display: block;
+    font-weight: 400;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+select.form-select:not([multiple]) {
+    display: inline-block;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    outline: 0;
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,.26);
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iNiIgd2lkdGg9IjEwIj48cG9seWdvbiBwb2ludHM9IjAsMCAxMCwwIDUsNiIgc3R5bGU9ImZpbGw6cmdiYSgwLDAsMCwuMjQpOyIvPjwvc3ZnPg==);
+    background-repeat: no-repeat;
+    background-position: right center;
+    cursor: pointer;
+    color: rgba(0,0,0,.87);
+    font-size: 14px;
+    padding: .5rem 1.25rem .5rem .25rem;
+}
+
+select.form-select[disabled]:not([multiple]) {
+	color: rgba(0,0,0,0.26);
+	cursor: none;
+}
+
+select.form-select[multiple] {
+	font-size: 14px;
+    padding: .25rem .5rem;
+}
+
+html.js input.form-autocomplete {
+	background-image: url("rings-loader.svg");
+	background-position: 200% center;
+}
+
+html.js input.form-autocomplete.throbbing {
+	background-position: 100% center;
+}
+
+
+
+/* VERTICAL TABS */
+
+.vertical-tabs,
+fieldset {
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12)
+}
+
+.vertical-tabs fieldset, 
+fieldset fieldset,
+fieldset.collapsed {
+	box-shadow: none;
+}
+
+fieldset fieldset,
+tr.even {
+	background-color: #f5f2f0;
+}
+
+
+
+div.vertical-tabs {
+	background: none;
+}
+div.vertical-tabs .vertical-tabs-list {
+	border-bottom: 0;
+	margin: 0;
+}
+
+div.vertical-tabs ul li.vertical-tab-button a,
+div.vertical-tabs ul li.vertical-tab-button a:active,
+div.vertical-tabs ul li.vertical-tab-button a:focus,
+div.vertical-tabs ul li.vertical-tab-button a:hover {
+	border-top: 0;	
+}
+
+div.vertical-tabs ul li.selected a:focus strong {
+	text-decoration: none;
+}
+
+.vertical-tab-button.selected a {
+	color: #2196f3;
+}
+
+
+@media(max-width:767px) {
+	
+	div.vertical-tabs .vertical-tabs-list {
+		width: 100%;
+	}
+	
+	div.vertical-tabs ul li.vertical-tab-button { 
+		display: inline-block
+	}
+	
+	
+	div.vertical-tabs .vertical-tabs-panes {
+		margin: 0;
+	}
+}
+
+
+
+
+
+
+/* TAB NAVIGATION */
+
+ul.primary li {
+	margin: 0;	
+}
+
+ul.tabs.primary li a:link,
+ul.primary li a:visited {
+	border: none;
+    border-radius: 0;
+    color: #1565C0;
+    line-height: inherit;
+    padding: .5rem 1.5rem;
+}
+
+ul.primary li a.active, ul.primary li a:active, ul.primary li a:hover, ul.primary li.active a {
+	color: #2196f3;
+}
+
+
+
+
+
+/* BUTTON */
+
+button,
+input[type="button"],
+input[type="submit"]:not(.add-display):not([id*="display"]) {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 18px;
+    color: rgba(0,0,0,.87);
+    text-transform: uppercase;
+    background-color: #FFF;
+    -webkit-transition: all .2s ease-in-out;
+    		transition: all .2s ease-in-out;
+    display: inline-block;
+    height: 36px;
+    padding: 0 26px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    background-image: none;
+    text-align: center;
+    line-height: 36px;
+    vertical-align: middle;
+    white-space: nowrap;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+    outline: none;
+    
+    
+    color: #fff;
+    background-color: #2196f3;
+}
+
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover:not(.add-display) {
+	background-color: #42a5f5;
+    box-shadow: 0 0 2px rgba(0,0,0,.12),0 2px 2px rgba(0,0,0,.2);
+}
+
+
+
+input[type="submit"][value="Remove"],
+input[type="submit"][value="Delete"] {
+	background-color: #f44336;
+}
+
+input[type="submit"][value="Remove"]:hover,
+input[type="submit"][value="Delete"]:hover {
+	background-color: #ef5350;
+}
+
+input.form-file[type="file"] + input[type="submit"],
+.file + input[type="submit"] {
+	margin-left: 1rem;
+}
+
+	
+@media(max-width:767px) {	
+	input.form-file[type="file"] + input[type="submit"], .file + input[type="submit"] {
+	    display: block;
+		margin-top: 1rem;
+		margin-left: 0;
+	}
+}
+
+
+
+
+/* progress bar */
+
+#progress {
+	color: #666;
+	font-size: .75rem;
+}
+
+/*.progress .bar {
+	background-color: #4c5762;
+	border: 0;
+	border-radius: 4px;
+	height: .375rem;
+	margin-bottom: .25rem;
+}
+.progress .filled {
+	background: #231f20;
+	border-radius: 4px;
+	height: .25rem;
+	position: relative;
+	top: 1px;
+}*/
+
+.progress .bar {
+	display: none;
+}
+
+#progress .message {
+	background-image: url("ball-triangle-loader.svg");
+    background-position: 0 center;
+    background-repeat: no-repeat;
+    border: none;
+    height: 32px;
+    background-size: contain;
+    padding-left: 3rem;
+}
+
+
+
+
+
+/* carousel image previews */
+
+.field-name-field-carousel-image .image-preview img {
+	height: auto;
+	max-width: 800px;
+}
+
+#edit-field-carousel-image-und-table > tbody > tr > td:nth-child(3) {
+	vertical-align: bottom;
+}
+
+
+
+
+
+
+html.js .js-hide { display: none !important; }

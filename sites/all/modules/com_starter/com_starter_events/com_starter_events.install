@@ -1,0 +1,408 @@
+<?php 
+
+/**
+ * Implements hook_install().
+ */
+function com_starter_events_install() {
+
+	// Create Event content type
+	$content_type = node_type_set_defaults(array(
+		'type' => 'event',
+		'name' => st('Event'),
+		'base' => 'node_content',
+		'description' => st("Events to be feed into your calendar."),
+		'custom' => 1,
+		'modified' => 1,
+		'locked' => 0,
+	));
+	
+	$type_name = _com_starter_events_get_content_type();
+
+	node_type_save( $content_type );
+	
+	//*** set per content type options ***//
+	// lets not hae this node published by dfault
+	//variable_set('node_options_' . $type_name, array('status', 'revision') );
+	variable_set('node_options_' . $type_name, array() );
+	variable_set('node_preview_' . $type_name, 1);
+	variable_set('node_submitted_' . $type_name, 0);
+
+	variable_set('weight_enabled_' . $type_name, 1);
+	variable_set('weight_menu_' . $type_name, 0);
+	variable_set('weight_range_' . $type_name, 10);
+
+	/* path alias */
+	variable_set('pathauto_node_' . $type_name . '_pattern', $type_name . '/[node:title]');
+	
+
+	/*** Taxonomy ***/
+	/*$vocabulary = new stdClass();
+	$vocabulary->name = 'Event Type';
+	$vocabulary->machine_name = 'event_type';
+	$vocabulary->module = 'com_starter_events';
+	taxonomy_vocabulary_save($vocabulary);
+	$vid = $vocabulary->vid;*/
+
+	/* add body field */
+	$body = node_add_body_field( $content_type );
+	$body['display']['default']['weight'] = 100;
+	field_update_instance($body);
+
+	/* create field instances */
+	$fields = _com_starter_events_get_fields();
+
+	foreach ($fields as $field) { field_create_field($field); }	
+
+	$instances = _com_starter_events_field_instances();
+	foreach ($instances as $instance) { field_create_instance($instance); }	
+
+	$role_permissions_admin = array(
+		'edit any event content',
+		'delete any event content',	
+	);
+
+	/* add some permissions */	
+	$role_permissions = array(
+		// articles 
+		'create event content',
+		'edit own event content',
+		'delete own event content',
+		// taxonomy
+		//'edit terms in ' . $vid,
+		//'delete terms in ' . $vid,
+	);
+	
+	user_role_grant_permissions( 3, $role_permissions );
+	user_role_grant_permissions( 4, $role_permissions );
+	user_role_grant_permissions( 5, $role_permissions );
+	user_role_grant_permissions( 3, $role_permissions_admin );
+	user_role_grant_permissions( 4, $role_permissions_admin );
+	
+	
+	// create placeholder event nodes
+	for($i=0;$i<12;$i++) {	
+	
+		$node = _com_starter_placeholder_create_node(array(
+			'type' => 'event',
+			'status' => 1,
+			'promote' => $i % 2,
+		), $i);
+
+		$custom_time = date('Y-m-d G:i:s', strtotime("now") + ( 60 * 60 * 24 * 7 * (1 + $i) ));
+	
+		$node->field_date[LANGUAGE_NONE][0] = array(
+			'value' =>$custom_time,
+            'timezone' => 'America/Los_Angeles',
+            'timezone_db' => 'UTC',
+            'date_type' => 'datetime',
+		);
+		
+		$node->field_presenter[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Presenter ' . ($i+1));
+		$node->field_contact[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Contact ' . ($i+1));
+		$node->field_fee[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Fee ' . ($i+1));
+		$node->field_location[LANGUAGE_NONE] = _com_starter_placeholder_create_text_field('Location ' . ($i+1));
+	
+		node_save($node);
+	}
+
+	/* add event block header image */
+	$image_path = _com_starter_placeholder_image_path('com_starter_blog');
+	$image = _com_starter_placeholder_image_prepare( $image_path );
+
+	variable_set('com_starter_events_block_header', $image->fid);
+	
+	file_usage_add($image, "com_starter", "placeholder", 0);
+	
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function com_starter_events_uninstall() {
+
+	$type_name = _com_starter_events_get_content_type();
+
+	//$tags = taxonomy_vocabulary_machine_name_load('event_type');
+	//taxonomy_vocabulary_delete( $tags->vid );
+
+	/* set per content type options */
+	//variable_del('node_options_' . $type_name);
+	variable_del('node_preview_' . $type_name);
+	variable_del('node_submitted_' . $type_name);
+
+	variable_del('weight_enabled_' . $type_name);
+	variable_del('weight_menu_' . $type_name);
+	variable_del('weight_range_' . $type_name);
+
+	/* path alias */
+	variable_del('pathauto_node_' . $type_name . '_pattern');
+
+	// remove fields, fields delete instances as well
+	$fields = _com_starter_events_get_fields();
+	foreach ($fields as $field) { field_delete_field( $field['field_name'] ); }
+
+	field_purge_batch(10);
+
+	// Delete  content type
+	node_type_delete( $type_name );
+
+	node_types_rebuild();
+	menu_rebuild();	
+}
+
+function _com_starter_events_get_content_type() { return 'event'; }
+
+function _com_starter_events_get_fields() {
+
+	$fields = array(
+		//create Event Type field
+		/*array(
+			'field_name' => 'field_event_type',
+			'type' => 'taxonomy_term_reference',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+			'settings' => array(
+				'allowed_values' => array(
+					array(
+						'vocabulary' => 'event_type',
+						'parent' => 0
+					),
+				),
+			),			
+		),*/
+		
+		// create date field
+		array(
+			'field_name' => 'field_date',
+			'type' => 'datetime',
+			//'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+		
+		//create Presenter field
+		array(
+			'field_name' => 'field_presenter',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),
+		
+		//create Contact field
+		array(
+			'field_name' => 'field_contact',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),	
+		
+		//create Fee field
+		array(
+			'field_name' => 'field_fee',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),	
+		
+		//create Location field
+		array(
+			'field_name' => 'field_location',
+			'type' => 'text',
+			'cardinality' => 1,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+		),		
+	);
+	
+	return $fields;
+}
+
+function _com_starter_events_field_instances() {
+	$instances = array(
+			
+		// attach Date to Event
+		array(
+			'field_name' => 'field_date',
+			'entity_type' => 'node',
+			'label' => 'Date',
+			'bundle' => 'event',
+			'required' => TRUE,
+			'settings' => array(
+				'enddate_get' => 1,
+				'repeat' => 1,
+				'cache_enabled' => 1,
+				'cache_count' => 4,
+			),
+			'widget' => array(
+				'type' => 'date_popup',
+				'weight' => 15,
+				'settings' => array(
+				'input_format' => 'M j Y - g:i:sa',
+				),
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'date_default',
+					'settings' => array('format_type' => 'com_starter_full', 'multiple_number' => 1, 'show_repeat_rule' => 'hide'),
+					'weight' => 0,
+				),
+				'teaser' => array(
+					'type' => 'date_default',
+					'settings' => array('format_type' => 'com_starter_full', 'multiple_number' => 1, 'show_repeat_rule' => 'hide'),
+					'weight' => 0,
+				),
+			),
+		),
+				
+		// attach Presenter to Event
+		array(
+			'field_name' => 'field_presenter',
+			'entity_type' => 'node',
+			'label' => 'Presenter',
+			'bundle' => 'event',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => 18,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'text_default',
+					'weight' => 10,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => 10,
+				),
+			),
+		),
+		
+		// attach Fee to Event
+		array(
+			'field_name' => 'field_fee',
+			'entity_type' => 'node',
+			'label' => 'Fee',
+			'bundle' => 'event',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => 23,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'text_default',
+					'weight' => 20,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => 20,
+				),
+			),
+		),
+
+		// attach Location to Event
+		array(
+			'field_name' => 'field_location',
+			'entity_type' => 'node',
+			'label' => 'Location',
+			'bundle' => 'event',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => 30,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'text_default',
+					'weight' => 30,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => 30,
+				),
+			),
+		),			
+				
+		// attach Contact to Event
+		array(
+			'field_name' => 'field_contact',
+			'entity_type' => 'node',
+			'label' => 'Contact',
+			'bundle' => 'event',
+			'required' => FALSE,
+			'settings' => array(),
+			'widget' => array(
+				'type' => 'text_textfield',
+				'settings' => array(),
+				'weight' => 20,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'text_default',
+					'weight' => 40,
+				),
+				'teaser' => array(
+					'type' => 'text_default',
+					'weight' => 40,
+				),
+			),
+		),				
+		
+		// attach Event Type to Event		
+		/*array(
+			'field_name' => 'field_event_type',
+			'entity_type' => 'node',
+			'label' => 'Event Type',
+			'bundle' => 'event',
+			'required' => FALSE,
+			'settings' => array(
+				'vocabulary' => 'event_type',
+			),
+			'widget' => array(
+				'type' => 'taxonomy_autocomplete',
+				'weight' => 25,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'taxonomy_term_reference_plain',
+					'weight' => 50,
+				),
+				'teaser' => array(
+					'type' => 'taxonomy_term_reference_plain',
+					'weight' => 50,
+				),
+			),
+		),*/
+	);
+	
+	return $instances;
+}

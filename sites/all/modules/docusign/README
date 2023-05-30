@@ -1,0 +1,61 @@
+DocuSign API integration
+
+This module provides basic API integration with the DocuSign API and Drupal.
+
+
+REQUIRED FILES
+
+In order for this module to work correctly you will have to download 3 files and
+install them to your libraries folder:
+
+XMLSecLibs
+http://code.google.com/p/xmlseclibs/source/browse/trunk/xmlseclibs.php
+direct link: http://xmlseclibs.googlecode.com/svn/trunk/xmlseclibs.php
+WSSE Soap 
+http://code.google.com/p/wse-php/source/browse/soap-wsse.php
+direct link: http://wse-php.googlecode.com/hg/soap-wsse.php
+WSA Soap
+http://code.google.com/p/wse-php/source/browse/soap-wsa.php
+direct link: http://wse-php.googlecode.com/hg/soap-wsa.php
+
+or you can use the drush command "docusign-dl" as follows:
+<code>
+drush docusign-dl
+</code>
+
+THING TO KNOW
+
+Avoid abusing the following methods:
+
+RequestStatus
+RequestStatuses
+RequestPDF
+
+
+// There is a simple way to create an signing iframe
+
+  $evenlope = new DocuSignEnvelope("Test Envelope", "This is a test build of a Docusign Envelope");
+
+  // Add a signing recipient
+  $recipient1 = $evenlope->addDrupalRecipient(user_load(16), 'Person\'s Full Name, esq.');
+
+  $file = drupal_get_path('module', 'mymodule') . '/pdf/my.pdf';
+
+  $document = $evenlope->addDocument("Document X for John Doe to Sign", $file);
+
+  // First Tab (recipient, page, x, y)
+  $document->addTab($recipient1, 1, 390, 280);
+
+  // Second Tab
+  $document->addTab($recipient1, 1, 30, 400);
+
+  $token = $envelope->sendEnvelope();
+
+  $form = array();
+
+  $form['iframe'] = array(
+    '#type' => 'docusign_iframe',
+    '#docusign_token' => $token,
+  );
+  
+  return $form;

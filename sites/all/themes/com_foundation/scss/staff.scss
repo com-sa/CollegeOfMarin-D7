@@ -1,0 +1,88 @@
+/* PAGES: STAFF
+----------------------------------------------- */
+.view-staff { text-align: center; }
+
+@media #{$large-up} {
+    .view-staff .views-row:nth-child(4n + 1) {
+       	clear:both;
+    }
+}
+
+@media #{$medium-only} {
+	.view-staff .views-row:nth-child(odd) {
+        clear:both;
+    }
+}
+
+.view-staff .view-content > .column { 
+	margin: 0 0 1em; 
+}
+
+.view-staff .view-content > .column > div {
+	margin-bottom: .333rem;
+}
+
+.view-staff .view-content > .column > div:last-child {
+	margin-bottom: 1.5rem;
+}
+
+.staff-graphic {
+	border: 1px solid #bdbdbd;
+	display:inline-block;
+	margin-bottom: rem-calc(20,14);
+	overflow: hidden;
+}
+
+.staff-name {
+	color: $muted-gold;
+	font-size: rem-calc(16,14);
+	font-weight: 900;
+	text-transform: uppercase;
+}
+
+.staff-position {
+	color: $gray;
+	font-size: rem-calc(16,14);
+}
+
+.staff-phone {
+	color: $steel-gray;
+}
+
+
+/* staff page block */
+
+.block-com-starter-staff-staff-info {
+	color: $steel-gray;
+}
+
+.block-com-starter-staff-staff-info:first-child {
+	margin-top: 2.333rem;	
+}
+
+.block-com-starter-staff-staff-info > .field {
+	margin-bottom: rem-calc(10,14);
+	padding-bottom: rem-calc(10,14);
+}
+
+@media #{$large-up} {
+	.block-com-starter-staff-staff-info > .field:not(.field-type-image) {
+		padding-left: rem-calc(20,14);
+		padding-right: rem-calc(20,14);
+	}
+}
+
+.block-com-starter-staff-staff-info > .field:nth-last-child(-n+3):not(:last-child) {
+	border-bottom: 1px solid $light-gray;
+}
+ 
+.block-com-starter-staff-staff-info .field-label {
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.block-com-starter-staff-staff-info .field-name-field-position {
+	color: $light-blue;
+	font-size: rem-calc(16,14);
+}
+

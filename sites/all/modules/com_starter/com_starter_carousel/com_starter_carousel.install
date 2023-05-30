@@ -1,0 +1,80 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function com_starter_carousel_install() {
+
+	// add carousel image instance to page
+	com_starter_carousel_add_field_instance();
+
+	/* add a carsouel to the home page */
+	$front_path = variable_get('site_frontpage', 'node');
+	$home_page_nid = substr($front_path, strrpos($front_path, '/') + 1);
+	$home = node_load($home_page_nid);
+
+	for ($i=0;$i<3;$i++) {
+
+		$image_path = _com_starter_placeholder_image_path('com_starter_carousel');
+
+		$image = file_copy((object) array(
+			'uid' => 1,
+			'uri' => $image_path,
+			'filemime' => file_get_mimetype($image_path),
+			'status' => 1,
+		), 'public://', FILE_EXISTS_REPLACE);
+
+		$home->field_carousel_image[LANGUAGE_NONE][$i] = (array) $image;
+		$home->field_carousel_image[LANGUAGE_NONE][$i]['title'] = "Lorem Ipsum";
+		$home->field_carousel_image[LANGUAGE_NONE][$i]['image_field_caption'] = array(
+			'value' => '',
+			'format' => 'wysiwyg',
+		);
+
+
+		if ( variable_get('com_starter_carousel_fullbleed', false) == false ) { 
+		//if ( variable_get('theme_choice') == 1 ) {
+			$image->image_field_caption = array(
+				'format' => 'wysiwyg',
+				'value' => _com_starter_placeholder_text(),
+			);
+		}
+
+	}
+
+	node_save($home);
+
+
+
+
+
+	// put block in place
+	db_merge('block')->key(array(
+	    'theme' => 'echotimes',
+		'module' => 'com_starter_carousel',
+		'delta' => 'com_starter_carousel',
+	))->fields(array(
+		'status' => 1,
+		'region' => 'featured',
+		'pages' => '',
+		'weight' => -20,
+	))->execute();
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function com_starter_carousel_uninstall() {
+	$carousel_types = array();
+	foreach(node_type_get_types() as &$type ) {
+		$fields = field_info_instances('node', $type->type);
+		if ( isset($fields['field_carousel_image']) ) {
+			$image = field_info_instance('node', 'field_carousel_image', $type->type);
+			field_delete_instance(field_info_instance('node', 'field_carousel_image', $type->type));
+
+		}
+	}
+
+	field_purge_batch(20);
+}

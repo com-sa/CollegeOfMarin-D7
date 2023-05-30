@@ -1,0 +1,319 @@
+<?php 
+
+function com_starter_carousel_block_info() {
+
+  	$blocks['com_starter_carousel'] = array(
+    	'info' => t('Page Carousel'),
+		'cache' => DRUPAL_CACHE_PER_PAGE,
+		'weight' => 0,
+		'status' => 0,
+		//'region' => 'featured',
+		'visibility' => BLOCK_VISIBILITY_NOTLISTED,
+		'pages' => '',
+		//'theme' => 'echotimes',
+		'weight' => -20,
+	);
+
+	return $blocks;
+}
+
+function com_starter_carousel_block_view($delta = '') {
+
+  	$block = array();
+
+  	switch ($delta) {
+    	
+    	case 'com_starter_carousel':
+
+			$block['subject'] = NULL;
+			$block['content'] = array(
+				'#markup' => com_starter_carousel_build_carsousel(),
+			);
+			
+			break;
+	}
+		
+	return $block;
+
+}
+
+function com_starter_carousel_create_images($style, $path) {
+	$derivative_uri = image_style_path($style, $path);
+	file_exists($derivative_uri) || image_style_create_derivative($style, $path, $derivative_uri);
+	file_create_url($derivative_uri);
+}
+
+function com_starter_carousel_form_node_form_alter(&$form, &$form_state, $form_id) {
+	drupal_add_css( drupal_get_path('module', 'com_starter_carousel') . '/node_form_carousel.css', array(
+		'group' => CSS_DEFAULT, 
+		'every_page' => FALSE,
+	));
+	
+	drupal_add_js( drupal_get_path('module', 'com_starter_carousel') . '/node_form_carousel.js', array(
+		'group' => JS_DEFAULT, 
+		'scope' => 'footer',
+		'requires_jquery' => TRUE,
+		'every_page' => FALSE,
+	));	
+}
+
+function com_starter_carousel_form_com_starter_admin_alter(&$form, &$form_state) {
+
+	$form['com_starter_settings']['carousel'] = array(
+		'#title' => t('Carousel'), 
+		'#type' => 'fieldset', 
+		'#weight' => count($form['com_starter_settings']) * 2, 
+	);
+	
+	$form['com_starter_settings']['carousel']['com_starter_carousel_fullbleed'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Fullbleed'),
+		'#default_value' => variable_get('com_starter_carousel_fullbleed', false),
+		'#description' => t('Should the carousel section appear full width?'),
+	);
+
+	$form['com_starter_settings']['carousel']['enable_types'] = array(
+		'#type' => 'fieldset', 
+		'#title' => t('Content Types'), 
+		'#weight' => 5, 
+		'#collapsible' => TRUE, 
+		'#collapsed' => FALSE,
+	);
+	
+	if ( module_exists('com_starter_blog') ) {
+		$form['com_starter_settings']['carousel']['enable_types']['com_starter_carousel_enable_article'] = array(
+			'#type' => 'checkbox',
+			'#title' => t('Article'),
+			'#default_value' => variable_get('com_starter_carousel_enable_article', 0),
+		);
+	}
+	
+	if ( module_exists('com_starter_events') ) {
+		$form['com_starter_settings']['carousel']['enable_types']['com_starter_carousel_enable_event'] = array(
+			'#type' => 'checkbox',
+			'#title' => t('Event'),
+			'#default_value' => variable_get('com_starter_carousel_enable_event', 0),
+		);
+	}	
+	
+	$form['com_starter_settings']['carousel']['enable_types']['com_starter_carousel_enable_staff'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Staff'),
+		'#default_value' => variable_get('com_starter_carousel_enable_staff', 0),
+    );
+
+	$form['#submit'][] = 'com_check_carousel_content_types';
+}
+
+function com_starter_carousel_get_basic_content_types() {
+	$content_types_raw = array_keys(node_type_get_types());
+	$content_types = array();
+	foreach($content_types_raw as $content_type) {
+		if ( !in_array($content_type, array("page", "webform")) ) { 
+			$content_types[$content_type] = $content_type;
+		}
+	}
+	
+	return $content_types;
+}
+
+function com_check_carousel_content_types(&$form, &$form_state) {	
+	$content_types = array_keys(com_starter_carousel_get_basic_content_types());
+	foreach($content_types as $type) {
+		if ( isset($form_state['values']['com_foundation_carousel_enable_' . $type]) && $form_state['values']['com_foundation_carousel_enable_' . $type] == 1 ) {
+			com_starter_carousel_add_field_instance([$type]);
+		} else {
+			com_starter_carousel_remove_field_instance([$type]);
+		}
+	}
+	
+}
+
+function com_starter_carousel_add_field_instance($types = array('page')) {
+
+	if ( !field_info_field('field_carousel_image') ) { 
+		field_create_field(array(
+		    'field_name' => 'field_carousel_image',
+		    'type' => 'image',
+		    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+		    'locked' => FALSE,
+		    'settings' => array(
+		        'uri_scheme' => 'public',
+		        'default_image' => FALSE,
+		    ),
+		    'storage' => array(
+		        'type' => 'field_sql_storage',
+		        'settings' => array(),
+		    ),
+		));
+	}
+	
+	/*if ( !field_info_field('field_carousel_text_position') ) { 
+		field_create_field(array(
+		    'field_name' => 'field_carousel_text_position',
+		    'type' => 'list_text',
+		    'cardinality' => 1,
+		    'locked' => FALSE,
+		    'settings' => array(
+		        'allowed_values' => array(
+		        	'top-left' => 'Top Left',
+	                'top-right' => 'Top Right',
+	                'bottom-left' => 'Bottom Left',
+	                'bottom-right' => 'Bottom Right',
+	            )
+		    ),
+		    'storage' => array(
+		        'type' => 'field_sql_storage',
+		        'settings' => array(),
+		    ),
+		));
+	}*/
+	
+	$carousel_instance_desc = 'Upload an images to be placed in a carousel at the top of this content.';
+	$carousel_instance = array(
+	    'field_name' => 'field_carousel_image',
+	    'entity_type' => 'node',
+	    'label' => 'Carousel',
+	    'bundle' => 'page',
+	    'description' => function_exists("t") ? t($carousel_instance_desc) : st($carousel_instance_desc),
+	    'required' => FALSE,
+	    'settings' => array(
+	        'default_image' => NULL,
+	        'file_directory' => 'page/carousel',
+	        'file_extensions' => 'png gif jpg jpeg',
+	        'max_filesize' => '',
+	        'max_resolution' => '3000x3000',
+	        'min_resolution' => '2000x640',
+	            'alt_field' => TRUE,
+	        'title_field' => TRUE,
+	        'image_field_caption' => TRUE,
+	        'imagecrop' => array(
+	            '1600x440' => '2000x640',
+	        ),
+	    ),
+	    'widget' => array(
+	        'type' => 'image_image',
+	        'settings' => array(
+	            'progress_indicator' => 'throbber',
+	            'preview_image_style' => '2000x640',
+	        ),
+	        'weight' => -1,
+	    ),
+	    'display' => array(
+	        'default' => array(
+	            'label' => 'hidden',
+	            'type' => 'hidden',
+	            'settings' => array('image_style' => '2000x640', 'image_link' => ''),
+	            'weight' => 0,
+	        ),
+	        'teaser' => array(
+	            'label' => 'hidden',
+	            'type' => 'hidden',
+	            'settings' => array('image_style' => '2000x640', 'image_link' => 'content'),
+	            'weight' => 0,
+	        ),
+	    ),
+	);
+	
+	/*$carousel_text_position_desc = 'Position of Call to Action text within Carousel';
+	$carousel_text_position_instance = array(
+	    'field_name' => 'field_carousel_text_position',
+	    'entity_type' => 'node',
+	    'label' => 'Carousel Text Postition',
+	    'bundle' => 'page',
+	    'description' => function_exists("t") ? t($carousel_text_position_desc) : st($carousel_text_position_desc),
+	    'required' => FALSE,
+	    'settings' => array(),
+	    'widget' => array(
+	        'type' => 'opations_select',
+	        'module' => 'options',
+	        'active' => 1,
+	        'settings' => array(),
+	        'weight' => 12,
+	    ),
+	    'display' => array(
+	        'default' => array(
+	            'label' => 'hidden',
+	            'type' => 'hidden',
+	            'settings' => array(),
+	            'weight' => 12,
+	        ),
+	        'teaser' => array(
+	            'label' => 'hidden',
+	            'type' => 'hidden',
+	            'settings' => array(),
+	            'weight' => 12,
+	        ),
+	    ),
+	    'default_value' => array(
+	    	array( 'value' => 'top_right' )
+	    )
+	);*/
+	
+	foreach( $types as &$type) {
+		if ( node_type_get_type($type) ) { 
+
+			$carousel_instance['bundle'] = $type;
+			$carousel_instance['settings']['file_directory'] = $type . '/carousel';
+
+			field_create_instance( $carousel_instance );
+
+			//$carousel_text_position_instance['bundle'] = $type;
+			//field_create_instance( $carousel_text_position_instance );
+		}
+	}
+}
+
+function com_starter_carousel_remove_field_instance($types = array('page')) {
+	
+	foreach( $types as &$type) {
+		$image = field_info_instance('node', 'field_carousel_image', $type);
+		//$text_position = field_info_instance('node', 'field_carousel_text_position', $type);
+		
+		field_delete_instance($image);
+		//field_delete_instance($text_position);
+	}
+	
+	field_purge_batch(10);
+}
+
+function com_starter_carousel_theme() {
+	return array(
+    	'com_starter_carousel' => array(
+			'variables' => array(
+				'slides' => NULL,
+			),
+			'template' => 'carousel'
+		),
+		'com_starter_carousel_image' => array(
+			'variables' => array(
+				'image_path' => NULL,
+			),
+			'template' => 'carousel-image'
+		),
+		
+	);
+}
+
+function com_starter_carousel_build_carsousel() {
+	$node = menu_get_object();
+	$content = '';
+	
+	if ( isset( $node->field_carousel_image['und'] ) ) {
+
+		$slides = $node->field_carousel_image['und'];
+	
+	    if ( $count = count( $slides ) ) {	    	
+			$content .= theme('com_starter_carousel', array("slides" => $slides ));
+		}
+	} elseif ( !isset($node) ) {		
+		
+		$image_path = com_starter_get_header_image(arg(0) . '_page');
+
+		if ( $image_path ) { 
+			$content .= theme('com_starter_carousel_image', array("image_path" => $image_path ));
+		}
+	}
+	
+	return $content;
+}

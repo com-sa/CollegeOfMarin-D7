@@ -1,0 +1,219 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function com_starter_install() {
+
+
+	// Insert default pre-defined node types into the database. For a complete
+	// list of available node type attributes, refer to the node type API
+	// documentation at: http://api.drupal.org/api/HEAD/function/hook_node_info.
+	$content_type = node_type_set_defaults(array(
+		'type' => 'page',
+		'name' => st('Basic page'),
+		'base' => 'node_content',
+		'description' => st("Use <em>basic pages</em> for your static content, such as an 'About us' page."),
+		'custom' => 1,
+		'modified' => 1,
+		'locked' => 0,
+	));
+
+	node_type_save($content_type);
+
+	// add body field to basic page node
+	$body = node_add_body_field( $content_type );
+	$body['widget']['weight'] = 0;
+	field_update_instance($body);
+
+	//*** set per content type options ***//
+
+	// lets not have this node published by dfault
+	//variable_set('node_options_page', array('status', 'revision') );
+	variable_set('node_options_page', array('status') );
+
+	variable_set('node_preview_page', 1);
+	variable_set('node_submitted_page', 0);
+
+	variable_set('weight_enabled_page', 1);	
+	variable_set('weight_range_page', 50);
+	variable_set('weight_menu_page', 0);
+	
+	// doesn't seem to be available in newest version of D7
+	//db_insert('weight_settings')->fields(array('type' => 'page', 'weight_enabled' => 1, 'weight_range' => 50 ))->execute();
+
+	variable_set('weight_enabled_page', 1);
+	variable_set('weight_range_page', 50);
+
+	/* path alias */
+	variable_set('pathauto_node_page_pattern', '[node:title]');
+
+	/* no comments */
+	variable_set('comment_page', 0);
+
+	// Don't display date and author information for "Basic page" nodes by default.
+	variable_set('node_submitted_page', FALSE);
+
+
+	// create default set of image styles
+	com_starter_create_image_effects();
+
+
+	//create small graphic field
+	field_create_field(array(
+		'field_name' => 'field_thumbnail',
+		'type' => 'image',
+		'cardinality' => 1,
+		'locked' => FALSE,
+		'settings' => array(
+			'uri_scheme' => 'public',
+			'default_image' => FALSE,
+		),
+		'storage' => array(
+			'type' => 'field_sql_storage',
+			'settings' => array(),
+		),
+	));
+
+	field_create_instance(com_starter_get_thumbnail_field_instances());
+
+	/* set default social links */
+	variable_set('social_media_facebook', 'https://www.facebook.com/collegeofmarin');
+	variable_set('social_media_twitter', 'https://twitter.com/collegeofmarin');
+	variable_set('social_media_youtube', 'https://www.youtube.com/user/collegeofmarin');	
+	variable_set('social_media_instagram', 'http://instagram.com/college_of_marin');
+	variable_set('social_media_linkedin', 'https://www.linkedin.com/company/college-of-marin');
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function com_starter_uninstall() {
+	com_starter_delete_image_effects();
+}
+
+function com_starter_get_image_styles() {
+	return 	array('180x1820','250x250','2000x640');
+}
+
+function com_starter_create_image_effects() {
+
+	$styles = com_starter_get_image_styles();
+
+	foreach($styles as $style) {
+		$style_obj = image_style_save(array('name' => $style));
+
+		/*$style_obj['label'] = $style;
+		$style_obj['name'] = $style;
+
+		drupal_write_record('image_styles', $style_obj);
+		$style_obj['is_new'] = TRUE;
+		// Clear all caches and flush.
+		image_style_flush($style_obj);*/
+
+		$style_prop = explode('x', $style);
+		$effect = array();
+
+		if ( in_array($style, array('295x295','1100x440','2000x640')) ) {
+			$effect['name'] = 'imagecrop_javascript';
+			$effect['weight'] = 0;
+			$effect['data'] = array(
+				'width' => $style_prop[0],
+				'height' => $style_prop[1],
+	            'xoffset' => 'center',
+	            'yoffset' => 'center',
+	            'resizable' => 0,
+	            'downscaling' => 1,
+	            'aspect_ratio' => 'CROP',
+	            'disable_if_no_data' => 0,
+			);
+		} else {
+			$effect['name'] = 'image_scale_and_crop';
+			$effect['weight'] = 10;
+			$effect['data'] = array(
+				'width' => $style_prop[0],
+				'height' => $style_prop[1],
+				'upscale' => FALSE,
+
+			);
+		}
+
+		$effect['isid'] = $style_obj['isid'];
+
+		image_effect_save($effect);
+
+		/*drupal_write_record('image_effects', $effect);
+		$style = image_style_load(NULL, $effect ['isid']);
+		image_style_flush($style);
+		return $effect;	*/
+
+
+
+
+		// these square image styles should reuse the 295x295 first then scale
+		if ( in_array($style, array('180x180')) ) {
+			$effect = array();
+			$effect['name'] = 'imagecrop_reuse';
+			$effect['weight'] = -10;
+			$effect['data'] = array(
+				'imagecrop_style' => '295x295',
+			);
+
+			$effect['isid'] = $style_obj['isid'];
+
+			image_effect_save($effect);
+		}
+
+	}
+}
+
+function com_starter_delete_image_effects() {
+
+	$styles = com_starter_get_image_styles();
+
+	foreach($styles as $style) { image_style_delete( image_style_load( $style ) ); }
+}
+
+function com_starter_get_thumbnail_field_instances() {
+	return array(
+		'field_name' => 'field_thumbnail',
+		'entity_type' => 'node',
+		'label' => 'Thumbnail',
+		'bundle' => 'page',
+		'description' => st('Upload an image to go with this page. To be placed on listing pages.'),
+		'required' => FALSE,
+		'settings' => array(
+			'default_image' => NULL,
+			'file_directory' => 'page',
+			'file_extensions' => 'png gif jpg jpeg',
+			'max_filesize' => '',
+			'max_resolution' => '3000x3000',
+			'min_resolution' => '250x250',
+			'alt_field' => TRUE,
+			'title_field' => '',
+		),
+		'widget' => array(
+			'type' => 'image_image',
+			'settings' => array(
+				'progress_indicator' => 'throbber',
+				'preview_image_style' => '250x250',
+			),
+			'weight' => -1,
+		),
+		'display' => array(
+			'default' => array(
+				'label' => 'hidden',
+				'type' => 'hidden',
+				'settings' => array('image_style' => '250x250', 'image_link' => ''),
+				'weight' => -10,
+			),
+			'teaser' => array(
+				'label' => 'hidden',
+				'type' => 'image',
+				'settings' => array('image_style' => '250x250', 'image_link' => 'content'),
+				'weight' => -10,
+			),
+		),
+	);
+}

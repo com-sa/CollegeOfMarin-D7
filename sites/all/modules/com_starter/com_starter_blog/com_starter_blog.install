@@ -1,0 +1,262 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function com_starter_blog_install() {
+
+	/*** Taxonomy ***/
+	$vocabulary = new stdClass();
+	$vocabulary->name = 'Tags';
+	$vocabulary->machine_name = 'tags';
+	$vocabulary->module = 'com_starter_blog';
+	taxonomy_vocabulary_save($vocabulary);
+	$vid = $vocabulary->vid;
+	
+	$terms = [];
+	foreach(array("First", "Second") as $name ) {
+		$term = new stdClass();
+		$term->name = $name;
+		$term->vid = $vid;
+		taxonomy_term_save($term);
+		$terms[] = $term->tid;
+	}
+
+
+	// Create content type
+	$content_type = node_type_set_defaults(
+		array(
+			'type' => 'article',
+			'name' => st('Article'),
+			'base' => 'node_content',
+			'description' => st("Content to be feed into your blog."),
+			'custom' => 1,
+			'modified' => 1,
+			'locked' => 0,
+		)
+	);
+
+	$type_name = com_starter_blog_get_content_type();
+
+	node_type_save( $content_type );
+
+	/* add body field */
+	node_add_body_field( $content_type );
+
+	//*** set per content type options ***//
+	// lets not hae this node published by dfault
+	variable_set('node_options_' . $type_name, array() );
+	variable_set('node_preview_' . $type_name, 1);
+	variable_set('node_submitted_' . $type_name, 0);
+
+	variable_set('weight_enabled_' . $type_name, 1);
+	variable_set('weight_menu_' . $type_name, 0);
+	variable_set('weight_range_' . $type_name, 10);
+
+	/* path alias */
+	variable_set('pathauto_node_' . $type_name . '_pattern', 'blog/[node:title]');
+
+	/* create fields instances */
+	$fields = com_starter_blog_get_fields();
+	foreach ($fields as $field) { field_create_field($field); }
+
+	/* create field instances */
+	$instances = com_starter_blog_get_field_instances();
+	foreach ($instances as $instance) { field_create_instance($instance); }
+
+	/* add some permissions */
+	$role_permissions_admin = array(
+		'edit any article content',
+		'delete any article content',
+	);
+
+	$role_permissions = array(
+		// articles
+		'create article content',
+		'edit own article content',
+		'delete own article content',
+		// taxonomy
+		'edit terms in ' . $vid,
+		'delete terms in ' . $vid,
+	);
+
+	user_role_grant_permissions( 3, $role_permissions );
+	user_role_grant_permissions( 4, $role_permissions );
+	user_role_grant_permissions( 5, $role_permissions );
+	user_role_grant_permissions( 3, $role_permissions_admin );
+	user_role_grant_permissions( 4, $role_permissions_admin );
+
+
+	// set proper ammount of items visible in blog carousel
+
+	$theme_choice = variable_get('theme_choice');
+
+	switch ($theme_choice) {
+		case 0:
+		    $articles = 2;
+	        break;
+	    case 1:
+	        $articles = 8;
+	        break;
+	    default:
+	        $articles = 4;
+	}
+
+	variable_set('blog_top_stories_per_row', $articles);
+
+
+	// create placeholder article nodes
+	for($i=0;$i<12;$i++) {
+
+		$node = _com_starter_placeholder_create_node(array(
+			'type' => 'article',
+			'status' => 1,
+		), $i);
+
+		$image_path = _com_starter_placeholder_image_path('com_starter_blog');
+		$node->field_thumbnail[$node->language][0] = (array) _com_starter_placeholder_image_prepare( $image_path );
+
+		$node->field_blog_tags[LANGUAGE_NONE][0]['tid'] = $terms[($i % 2)];
+
+		node_save($node);
+	}
+	
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function com_starter_blog_uninstall() {
+
+	$type_name = com_starter_blog_get_content_type();
+
+	$tags = taxonomy_vocabulary_machine_name_load('tags');
+	taxonomy_vocabulary_delete( $tags->vid );
+
+	/* set per content type options */
+	//variable_del('node_options_' . $type_name);
+	variable_del('node_preview_' . $type_name);
+	variable_del('node_submitted_' . $type_name);
+
+	variable_del('weight_enabled_' . $type_name);
+	variable_del('weight_menu_' . $type_name);
+	variable_del('weight_range_' . $type_name);
+
+	/* path alias */
+	variable_del('pathauto_node_' . $type_name . '_pattern');
+
+	$fields = com_starter_blog_get_fields();
+	foreach ($fields as $field) { field_delete_field( $field['field_name'] ); }
+
+	field_purge_batch(10);
+
+	// Delete  content type
+	node_type_delete( $type_name );
+
+	node_types_rebuild();
+	menu_rebuild();
+}
+
+function com_starter_blog_get_content_type() { return 'article'; }
+
+function com_starter_blog_get_fields() {
+
+	$fields = array(
+		//create Tags field
+		array(
+			'field_name' => 'field_blog_tags',
+			'type' => 'taxonomy_term_reference',
+			'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+			'locked' => FALSE,
+			'storage' => array(
+				'type' => 'field_sql_storage',
+				'settings' => array(),
+			),
+			'settings' => array(
+				'allowed_values' => array(
+					array(
+						'vocabulary' => 'tags',
+						'parent' => 0
+					),
+				),
+			),
+		),
+	);
+
+	return $fields;
+}
+
+function com_starter_blog_get_field_instances() {
+	$instances = array(
+		/* add small graphic */
+		array(
+			'field_name' => 'field_thumbnail',
+			'entity_type' => 'node',
+			'label' => 'Thumbnail',
+			'bundle' => 'article',
+			'description' => st('Upload an image to go with this article. To be placed on listing pages.'),
+			'required' => TRUE,
+			'settings' => array(
+				'default_image' => NULL,
+				'file_directory' => 'article',
+				'file_extensions' => 'png gif jpg jpeg',
+				'max_filesize' => '',
+				'max_resolution' => '3000x3000',
+				'min_resolution' => '250x250',
+				'alt_field' => TRUE,
+				'title_field' => '',
+			),
+			'widget' => array(
+				'type' => 'image_image',
+				'settings' => array(
+					'progress_indicator' => 'throbber',
+					'preview_image_style' => '250x250',
+				),
+				'weight' => -1,
+			),
+			'display' => array(
+				'default' => array(
+					'label' => 'hidden',
+					'type' => 'hidden',
+					'settings' => array('image_style' => '250x250', 'image_link' => ''),
+					'weight' => -10,
+				),
+				'teaser' => array(
+					'label' => 'hidden',
+					'type' => 'image',
+					'settings' => array('image_style' => '250x250', 'image_link' => 'content'),
+					'weight' => -10,
+				),
+			),
+		),
+
+		// attach tags to Blog
+		array(
+			'field_name' => 'field_blog_tags',
+			'entity_type' => 'node',
+			'label' => 'Tags',
+			'bundle' => 'article',
+			'required' => FALSE,
+			'settings' => array(
+				//'vocabulary' => 'tags',
+			),
+			'widget' => array(
+				//'type' => 'taxonomy_autocomplete',
+				'type' => 'options_select',
+				'weight' => -2,
+			),
+			'display' => array(
+				'default' => array(
+					'type' => 'taxonomy_term_reference_plain',
+					'weight' => -2,
+				),
+				'teaser' => array(
+					'type' => 'taxonomy_term_reference_plain',
+					'weight' => -2,
+				),
+			),
+		),
+	);
+
+	return $instances;
+}
