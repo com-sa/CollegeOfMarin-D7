@@ -1266,25 +1266,21 @@ function com_get_multi_site_base_url_return($url = '') {
 	$com_multi_site_base_url = '';
 
 	// Prefix the sub site with the corresponding environmental variable.
-	if (isset($_ENV['AH_SITE_ENVIRONMENT'])) {
-	  switch ($_ENV['AH_SITE_ENVIRONMENT']) {
+	if (isset($_ENV['PANTHEON_ENVIRONMENT'])) {
+	  switch ($_ENV['PANTHEON_ENVIRONMENT']) {
 		case 'dev':
 		  $com_multi_site_base_url = 'http://dev.' . $url;
 		  break; 
 		case 'test':
 		  $com_multi_site_base_url = 'http://stage.' . $url;
 		  break;
-		case 'prod':
+		case 'live':
 			//Must accommodate top level marin.edu or www.marin.edu being preserved for legacy site for now.
 		  if (substr( $url, 0, 9 ) == "marin.edu") {
-			$com_multi_site_base_url = 'http://www1.' . $url;
+			  $com_multi_site_base_url = 'http://www1.' . $url;
+		  } else {
+			  $com_multi_site_base_url = 'http://' . $url;
 		  }
-		  else {
-			$com_multi_site_base_url = 'http://' . $url;
-		  }
-		  break;
-		case 'ra':
-		  $com_multi_site_base_url = 'http://ra.' . $url;
 		  break;
 	  }
 	} 
