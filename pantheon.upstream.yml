@@ -12,9 +12,9 @@ drush_version: 8
 # Protected Web Paths
 # https://pantheon.io/docs/pantheon-yml#protected-web-paths
 protected_web_paths:
-	- /private/
-	- /sites/default/files/private/
-	- /sites/default/files/config/
+  - /private/
+  - /sites/default/files/private/
+  - /sites/default/files/config/
 
 # Nested Docroot
 # https://pantheon.io/docs/pantheon-yml#nested-docroot
