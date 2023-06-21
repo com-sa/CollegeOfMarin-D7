@@ -88,14 +88,13 @@
 					<ul> 
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/faculty-staff'); ?>">Faculty/Staff</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('as.marin.edu'); ?>">Academic Senate</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/assessment-and-program-review'); ?>">Assessment/Program Review</a></li>						
 						<li><a href="<?php com_get_multi_site_base_url('cs.marin.edu'); ?>">Classified Senate</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('as.marin.edu/cc'); ?>">Curriculum Committee</a></li>
 						<li><a href="https://netapps.marin.edu/Apps/Directory/EmployeeSearch.aspx">Employee Directory</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('as.marin.edu/handbook'); ?>">Faculty Handbook</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('gov.marin.edu'); ?>">Participatory Governance</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/professional-learning'); ?>">Professional Learning</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('marin.edu/program-review'); ?>">Program Review</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('slo.marin.edu'); ?>">Student Learning Outcomes</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('cs.marin.edu/classified-professionals-handbook'); ?>">Staff Handbook</a></li>
 					</ul>
 					<ul>

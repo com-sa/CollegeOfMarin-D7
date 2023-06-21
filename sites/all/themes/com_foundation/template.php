@@ -450,7 +450,8 @@ function com_foundation_preprocess_html(&$variables) {
 	drupal_add_js( array( 'COM' => $settings ), 'setting' );
 
 	//BDS 04/20/22: External JS files cannot be included in com_foundation.info and must be loaded separately from 'setting'.
-	//drupal_add_js('https://ai.ocelotbot.com/embed/standard/22d1a09e-06e6-40e5-aee9-5363045232de?ha=right&amp;hv=16px&amp;va=bottom&amp;vv=16px&amp;ts=0&amp;bs=calloutBubble&amp;av=0', 'external');		
+	//drupal_add_js('https://ai.ocelotbot.com/embed/standard/22d1a09e-06e6-40e5-aee9-5363045232de?ha=right&amp;hv=16px&amp;va=bottom&amp;vv=16px&amp;ts=0&amp;bs=calloutBubble&amp;av=0', 'external');
+  drupal_add_js('https://ai.ocelotbot.com/embed/standard/22d1a09e-06e6-40e5-aee9-5363045232de', 'external');
 }
 
 /**
