@@ -78,6 +78,7 @@
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/campus-life'); ?>">Campus Life</a></li>
 						<li><a href="http://athletics.marin.edu">Athletics</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/comcard'); ?>">COM Card / Student ID</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-hour'); ?>">COMmunity Hour</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/events'); ?>">Events & Activities</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('gallery.marin.edu'); ?>">Fine Arts Gallery</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('pa.marin.edu'); ?>">Performing Arts</a></li>
