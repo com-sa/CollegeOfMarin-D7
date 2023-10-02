@@ -71,7 +71,7 @@
 						<li><a href="<?php com_get_multi_site_base_url('library.marin.edu'); ?>">Library</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/sas'); ?>">Student Accessibility Services</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu'); ?>">Student Services</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/tcc'); ?>">Transfer &amp; Career</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/tcc'); ?>">Transfer Center</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/tutoring-labs'); ?>">Tutoring / Labs</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/veterans'); ?>">Veteran Services</a></li>
 					</ul>
