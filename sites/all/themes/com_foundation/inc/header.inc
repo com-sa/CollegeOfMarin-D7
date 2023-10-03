@@ -66,7 +66,7 @@
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/students'); ?>">Students</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/campus-store'); ?>">Bookstore</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/counseling'); ?>">Counseling</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/student-employment'); ?>">Career Center</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/student-employment'); ?>">Career Services</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/international-students'); ?>">International Students</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('library.marin.edu'); ?>">Library</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/sas'); ?>">Student Accessibility Services</a></li>
