@@ -56,7 +56,7 @@
 						<li><a href="<?php com_get_multi_site_base_url('academics.marin.edu'); ?>">Academic Programs</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('cte.marin.edu'); ?>">Career Education</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/schedule'); ?>">Class Schedules &amp; Catalogs</a></li>
-						<li><a href="http://marincommunityed.augusoft.net/">Community Education</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-programs'); ?>">Community Education &amp; Programs</a></li>
 						<li><a href="https://marin.elumenapp.com/public/">Course Outline of Record</a></li>
 						<li><a href="https://marin.elumenapp.com/catalog/current/program-and-course-descriptions">Degrees &amp; Certificates</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ol.marin.edu'); ?>">Online Learning</a></li>
