@@ -36,9 +36,9 @@
 				<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/cdp'); ?>">Child Development Program</a></li>
 				<li><a href="<?php com_get_multi_site_base_url('es.marin.edu/registration/enrollment-priority'); ?>">Enrollment Priority</a></li>
 				<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/eops-calworks'); ?>">EOPS/CARE & CalWORKs</a></li>
+				<li><a href="<?php com_get_multi_site_base_url('initiatives.marin.edu/oer-ztc'); ?>">OER &amp; ZTC</a></li>
 				<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/outreach'); ?>">Outreach</a></li>
 				<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/health-services'); ?>">Student Health Services</a></li>
-				<li><a href="<?php com_get_multi_site_base_url('initiatives.marin.edu/ztc'); ?>">Zero Textbook Cost Program</a></li>
 			</ul>
 			<ul class="links column">
 				<li><a href="https://netapps.marin.edu/Apps/Directory/EmployeeSearch.aspx">Employee Directory</a></li>
