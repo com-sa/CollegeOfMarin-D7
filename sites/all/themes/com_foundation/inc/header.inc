@@ -54,12 +54,12 @@
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/academics'); ?>">Academics</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/events/academic-calendar'); ?>">Academic Calendar</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('academics.marin.edu'); ?>">Academic Programs</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/articulation'); ?>">Articulation</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('cte.marin.edu'); ?>">Career Education</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/schedule'); ?>">Class Schedules &amp; Catalogs</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-programs'); ?>">Community Education &amp; Programs</a></li>
 						<li><a href="https://marin.elumenapp.com/public/">Course Outline of Record</a></li>
 						<li><a href="https://marin.elumenapp.com/catalog/current/program-and-course-descriptions">Degrees &amp; Certificates</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('ol.marin.edu'); ?>">Online Learning</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/learning-communities'); ?>">Learning Communities</a></li>
 					</ul>
 					<ul>
