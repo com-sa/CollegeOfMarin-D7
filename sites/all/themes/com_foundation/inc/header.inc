@@ -103,7 +103,7 @@
 					<ul>
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/administration'); ?>">Administration</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('police.marin.edu'); ?>">Campus Police</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('marin.edu/college-operations'); ?>">Administrative Services</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/college-operations'); ?>">College Operations</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('fiscal.marin.edu'); ?>">Fiscal Services</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('hr.marin.edu'); ?>">Human Resources</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('it.marin.edu'); ?>">Information Technology</a></li>
