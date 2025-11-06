@@ -57,7 +57,6 @@
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/articulation'); ?>">Articulation</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('cte.marin.edu'); ?>">Career Education</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/schedule'); ?>">Class Schedules &amp; Catalogs</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-programs'); ?>">Community Education &amp; Programs</a></li>
 						<li><a href="https://marin.elumenapp.com/public/">Course Outline of Record</a></li>
 						<li><a href="https://marin.elumenapp.com/catalog/current/program-and-course-descriptions">Degrees &amp; Certificates</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/learning-communities'); ?>">Learning Communities</a></li>
@@ -66,8 +65,8 @@
 					<ul>
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/students'); ?>">Students</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/campus-store'); ?>">Bookstore</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/counseling'); ?>">Counseling</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/career-services'); ?>">Career Services</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/counseling'); ?>">Counseling</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/international-students'); ?>">International Students</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('library.marin.edu'); ?>">Library</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('ss.marin.edu/sas'); ?>">Student Accessibility Services</a></li>
@@ -80,6 +79,7 @@
 						<li class="home"><a href="<?php com_get_multi_site_base_url('marin.edu/campus-life'); ?>">Campus Life</a></li>
 						<li><a href="http://athletics.marin.edu">Athletics</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/comcard'); ?>">COM Card / Student ID</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-programs'); ?>">Community Education &amp; Programs</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/community-hour'); ?>">COMmunity Hour</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/events'); ?>">Events & Activities</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('gallery.marin.edu'); ?>">Fine Arts Gallery</a></li>
