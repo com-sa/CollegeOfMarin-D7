@@ -117,7 +117,7 @@
 						<li><a href="<?php com_get_multi_site_base_url('accreditation.marin.edu'); ?>">Accreditation</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/board-trustees'); ?>">Board of Trustees</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('prie.marin.edu/emp'); ?>">Educational Master Plan</a></li>
-						<li><a href="<?php com_get_multi_site_base_url('marin.edu/fast-facts'); ?>">Fast Facts</a></li>
+						<li><a href="<?php com_get_multi_site_base_url('marin.edu/fast-facts'); ?>">Fact Book</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('legacy.marin.edu'); ?>">History &amp; Highlights</a></li>
 						<li><a href="http://measurebcom.org">Measure B</a></li>
 						<li><a href="<?php com_get_multi_site_base_url('marin.edu/mission'); ?>">Mission</a></li>
